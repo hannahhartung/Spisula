@@ -17,10 +17,9 @@ date
 gatk CombineGVCFs \
      --tmp-dir $TMP \
      -R $REFFASTA \
-     # -L $REGION \
      --variant Sim.g.vcf \
      --variant Sol.g.vcf \
-     -O all.g.vcf
+     -O all.g.vcf &
 
 echo Run ended
 date
