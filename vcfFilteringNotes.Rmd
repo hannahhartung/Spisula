@@ -39,7 +39,7 @@ awk -F "," '{if($3>100) {print} }' Sim.filtered2.vcf | awk '{{print $2,$3,$4,$5,
 ```
 
 Attempts to Filter Sol by the same locations
-Alternative recommended by Dr. Hare: 
+Alternative recommended by Dr. Hare: bedtools from quinlab
 ```{}
 awk '{print $1, $2}' Sim.filtered3.vcf | head
 grep -v "#" Sim.g.vcf | awk '{{print}}' > Sol.testplus.vcf

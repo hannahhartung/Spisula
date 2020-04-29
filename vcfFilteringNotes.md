@@ -29,7 +29,7 @@ Filtering Similis
     awk -F "," '{if($3>100) {print} }' Sim.filtered2.vcf | awk '{{print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1}}' > Sim.filtered3.vcf
 
 Attempts to Filter Sol by the same locations Alternative recommended by
-Dr. Hare:
+Dr. Hare: bedtools from quinlab
 
     awk '{print $1, $2}' Sim.filtered3.vcf | head
     grep -v "#" Sim.g.vcf | awk '{{print}}' > Sol.testplus.vcf
