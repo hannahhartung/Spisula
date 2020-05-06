@@ -15,7 +15,7 @@ library(knitr)
 
 Length Histogram
 
-```{r cars}
+```{r shelllength}
 Spislengths <- read.csv("./SpisulaR_2020May6.csv")
 colnames(Spislengths) <- c("Old_ID","DNAPlate", "PlateWell", "ID", "Label", "Add","ShellStatus","CollectionTeamShell","HingeHeightmm","ShellLengthmm", "EstimateShellLength","Extracted","Species")
 
