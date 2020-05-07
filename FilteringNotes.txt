@@ -1,0 +1,247 @@
+#Filtering take two: May 2020
+
+############# Testing Lines ################
+
+grep -v "#" Sim.g.vcf > Sim.test.vcf
+head Sim.test.vcf
+
+#Prints the columns in order
+grep -v "#" Sim.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | tail
+#Save that
+grep -v "#" Sim.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' > Sim.test.vcf
+
+
+wc -l Sim.g.vcf
+7046542 Sim.g.vcf
+wc -l Sim.test.vcf
+6868878 Sim.test.vcf
+
+grep "1/1" Sim.test.vcf | wc -l
+
+#get both phased and unphased
+grep "1/1\|1|1" Sim.test.vcf | wc -l   
+		410182 = 1/1 + 1|1
+
+
+	0/0 		5900698
+	1/1			172045
+	0/1			280143
+	1/0			0
+	0|0			18462 (?)
+	1|1			238137
+
+#I CAN include that phased BUT all the phased have an additional phase/genotype on the same
+#	line that is 1|0 so they are not really homozygous. Could be an artifact of the process
+#	but better to not include them I think.
+
+#Filter by quality
+
+grep "1/1\|1|1" Sim.test.vcf | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' | head 
+
+#Is filtering by Q >100 doing anything?
+grep "1/1" Sim.test.vcf | wc -l
+172045
+
+grep "1/1" Sim.test.vcf | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' | wc -l
+151190
+
+#Yes filtering by Quality is doing something
+
+awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' Sim.filtered2.vcf | head
+awk -F "," '{if($3>100) {print} }' Sim.filtered2.vcf | awk '{{print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1}}' > Sim.filtered3.vcf
+
+
+#Filter against the Solidissima Lines
+#Prepare Solidissima, looking for anything that is different from the reference.
+#Why would there even be 0/0s? <- Bad reads?
+#We do not want to filter anything out
+grep -v "#" Sol.g.vcf | awk '{ {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' > Sol.test.vcf 
+
+#DONT PRINT IN FANCY ORDER
+grep -v "#" Sol.g.vcf > Sol.test.vcf 
+
+#Compare the two based on position. 
+#Try using new program: Bedtools
+
+export PATH=/programs/bedtools2-2.29.2/bin:$PATH
+#Bedtools is expecting integer values for chromosomes
+
+#Starting in R
+/programs//R-3.5.0s/bin/R
+install.packages("tidyverse")
+library("tidyverse")
+#install.packages("vcfR") #May not be needed
+Sol <- read.table("Sol.test.vcf")
+Sim <- read.table("Sim.filter.vcf")
+
+> nrow(Sol)
+[1] 3,833,767
+> nrow(Sim)
+[1] 151,190
+
+Sol <- as.data.frame(Sol)
+Sim <- as.data.frame(Sim)
+#Chromosome (column 1 has a lot of extra data in it "Levels" but it does not affect what
+I am doing here)
+
+#Time this takes to run before its ecen doing anything: more than 5 minutes
+#Took 4 minutes running on 18 threads
+#How to get R to run on multiple CPU
+for (i in 1:nrow(Sol)) {chrom <- Sol[i,1]
+pos <- Sol[i,2]}
+
+#Prior to starting R do the following:
+export OMP_NUM_THREADS=16
+
+#So quit R with q() and then that and then restart and do:
+/programs//R-3.5.0s/bin/R
+library("tidyverse")
+Sol <- read.table("Sol.test.vcf")
+Sim <- read.table("Sim.filter.vcf")
+Sim["V11"] = "P"
+
+#Test
+for (i in 1:100) {
+chrom <- Sol[i,1]
+pos <- Sol[i,2]
+for (j in 1:100) {
+if (Sim[j,1]==chrom & Sim[j,2]==pos) {
+Sim[j,4] <- NA
+}
+}
+}
+
+for (i in 1:nrow(Sol)) {
+chrom <- Sol[i,1]
+pos <- Sol[i,2]
+if (is.integer(i/10000)) {print(i)}
+for (j in 1:nrow(Sim)) {
+if (Sim[j,1]==chrom & Sim[j,2]==pos) {
+Sim[j,4] <- NA
+print(Sim[j,4])
+}
+}
+}
+#Said that trying to insert "F" didn't work so I just put in NA
+#Piping with >%> doesn't seem to work
+#Doesn't look like its running on 16, but only 4 are available so I think/hope it was
+#Next time insert a progress checker:
+if (is.integer(i/10000)) {print(i)}
+#and
+print(Sim[j,4]) #after turning it NA
+
+
+
+
+
+################ RUN LINES #####################
+grep -v "#" Sim.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' > Sim.test.vcf
+grep "1/1" Sim.test.vcf | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' > Sim.filter.vcf
+grep -v "#" Sol.g.vcf > Sol.test.vcf 
+
+/programs//R-3.5.0s/bin/R
+#install.packages("tidyverse")
+library("tidyverse")
+Sol <- read.table("Sol.test.vcf")
+Sim <- read.table("Sim.filter.vcf")
+Sim["V11"] = "P"
+
+for (i in 1:nrow(Sol)) {
+chrom <- Sol[i,1]
+pos <- Sol[i,2]
+for (j in 1:nrow(Sim)) {
+if (Sim[j,1]==chrom & Sim[j,2]==pos) {
+Sim[j,4] <- NA
+}
+}
+}
+
+
+
+
+
+
+
+
+#April 2020
+#Code for filtering
+grep "#" Sim.g.vcf > Sim.test.vcf
+grep -v "#" Sim.subset.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | tail
+wc -l Sim.g.vcf
+7,046,542 Sim.g.vcf
+wc -l Sim.testplus.vcf 
+6868878 Sim.testplus.vcf
+Remove from grep #
+grep -v "#" Sim.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' > Sim.testplus.vcf
+-v is remove
+Sometimes is it 0|0? Yes. What is the difference between / and |, phased vs unphased
+grep "0/0" Sim.testplus.vcf | wc -l
+5900698
+wc -l Sim.filtered3.vcf
+5,169,980 Sim.filtered3.vcf
+grep "0|0" Sim.testplus.vcf | wc -l
+18462
+They are the different types of data. For simplicity, which is most similar to theirs 
+from the powerpoint? The first kind.
+# SHOULD IT BE 1/1? YES
+grep "0/0" Sim.testplus.vcf > Sim.filtered2.vcf
+awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' Sim.filtered2.vcf | head
+awk -F "," '{if($3>100) {print} }' Sim.filtered2.vcf | awk '{{print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1}}' > Sim.filtered3.vcf
+awk -F "," '{if($3>100) {print} }' Sim.filtered2.vcf | awk '{{print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1}}' | head
+
+
+
+Filter Sol with Sim pieces
+awk '{print $1, $2}' Sim.filtered3.vcf | head
+grep -v "#" Sim.g.vcf | awk '{{print}}' > Sol.testplus.vcf
+
+awk '{print $1, $2}' Sim.filtered3.vcf > Sim.filter.index.vcf
+
+
+
+Sub2 Test
+head Sol.testplus.vcf > Sol.sub2.vcf
+awk '{print $1, $2}' Sim.filtered3.vcf | head > Sim.sub2.vcf
+
+
+Sim.sub2.vcf | for i in $(cat); do
+    echo "$i"
+done
+
+while IFS='' read -r LINE || [ -n "${LINE}" ]; do
+    echo "${LINE}"
+    grep "${LINE}" Sol.sub2.vcf | awk '{print}'
+done < Sim.sub2.vcf 
+
+while IFS='' read -r LINE || [ -n "${LINE}" ]; do
+echo ${LINE}
+echo ${LINE} | cut -d " " --f 1
+echo ${LINE} | cut -d " " --f 2
+echo a
+echo b
+awk '{if($1==a && $2==b) {print} }' Sol.sub2.vcf
+done < Sim.sub2.vcf 
+
+
+
+
+
+
+while IFS='' read -r LINE || [ -n "${LINE}" ]; do
+echo ${LINE}
+echo "${LINE}" | cut -d " " --f 1 > a.txt
+echo "${LINE}" | cut -d " " --f 2 > b.txt
+awk '{if($1== && $2==b.txt) {print} }' Sol.sub2.vcf
+done < Sim.sub2.vcf 
+
+
+
+while IFS='' read -r LINE || [ -n "${LINE}" ]; do
+echo ${LINE}
+cut -d " " --f 1 "${LINE}" 
+cut -d " " --f 2 "${LINE}"
+awk '{if($1== cut -d " " --f 1 "${LINE}"  && $2==cut -d " " --f 2 "${LINE}") {print} }' Sol.sub2.vcf
+done < Sim.sub2.vcf 
+
+
+

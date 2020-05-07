@@ -14,7 +14,7 @@ Length Histogram
 Spislengths <- read.csv("./SpisulaR_2020May6.csv")
 colnames(Spislengths) <- c("Old_ID","DNAPlate", "PlateWell", "ID", "Label", "Add","ShellStatus","CollectionTeamShell","HingeHeightmm","ShellLengthmm", "EstimateShellLength","Extracted","Species")
 
-Spislengths$Species <- recode(Spislengths$Species, "failed to amplify; needs retest" = 'Not Yet Identified', "Failed to amplify; needs retest" = 'Not Yet Identified', 'S. similis'='S. similis', 'S. solidisima'= 'S. solidissima')
+Spislengths$Species <- recode(Spislengths$Species, "failed to amplify; needs retest" = 'Not Yet Identified', "Failed to amplify; needs retest" = 'Not Yet Identified', 'S. similis'='S. s. similis', 'S. solidisima'= 'S. s. solidissima')
 
 Spislengths %>%
   select(ID, ShellLengthmm, HingeHeightmm, EstimateShellLength, Species) %>%
