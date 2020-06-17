@@ -1,13 +1,13 @@
 #!/bin/bash
 
-REFFASTA=Solidis_ref.fa
+REFFASTA=Sol_cdhit_ref.fa
 
 # Un-comment one of the accession/sample pair below to run alignment for this sample
 
 #ACC=$1
 #SAM=$2
 
-ACC=Sol
+ACC=Sol6
 SAM=Solidissima
 
 #ACC=SRR1663609
@@ -24,9 +24,9 @@ SAM=Solidissima
 echo Alignment started
 date
 
-bwa mem -M -t 20 \
+bwa mem -M -t 7 \
 -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
-${ACC}_R1.fq.gz  ${ACC}_R2.fq.gz \
+${ACC}_R1.fastq.gz  ${ACC}_R2.fastq.gz \
 | samtools view -Sb - > $ACC.bam
 
 echo Alignment finished

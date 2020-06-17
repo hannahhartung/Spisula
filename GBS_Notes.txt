@@ -1,0 +1,4 @@
+#GBS
+
+#DOWNLOAD PILOT DATA
+wget -nH -np -N -r --cut-dirs 2 --no-check-certificate --user hare --password Represent-Woolen-Opportunity-Absence-6 https://umgcdownload.msi.umn.edu/hare/200518_NB551498_0045_AH2NKMBGXF/Hare_Project_001

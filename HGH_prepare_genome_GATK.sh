@@ -9,13 +9,13 @@ export PATH=$GATKDIR:$PATH
 # cd genome
 
 # Genome summary files needed and by GATK tools
-gatk CreateSequenceDictionary -R Solidis_ref.fa  -O Solidis_ref.dict
-samtools faidx Solidis_ref.fa
+gatk CreateSequenceDictionary -R Sol_cdhit_ref.fa  -O Sol_cdhit_ref.dict
+samtools faidx Sol_cdhit_ref.fa
 
 # index for BWA alignment
-bwa index Solidis_ref.fa
+bwa index Sol_cdhit_ref.fa
 
 # index image file needed by some Spark-based tools (if used)
-gatk --java-options "-Djava.io.tmpdir=$TMP" BwaMemIndexImageCreator \
-     -I Solidis_ref.fa \
-     -O Solidis_ref.fa.img
+#gatk --java-options "-Djava.io.tmpdir=$TMP" BwaMemIndexImageCreator \
+#     -I Sol_cdhit_ref.fa \
+#     -O Sol_cdhit_ref.fa.img

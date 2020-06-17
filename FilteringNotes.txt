@@ -1,3 +1,1129 @@
+#STARTING OVER AGAIN
+#RawReads directory in Spisula folder
+
+
+#INITIALIZE
+mkdir /workdir/hh693
+cd /workdir/hh693
+cp /home/mph75_0001/shared/Hannah/Spisula/MarkerDevelopment/* . &
+
+
+#FASTQC
+#FOR ORIGINALS AND TRIMMED
+
+
+#BBMAP
+SAMPLES=(
+    Sim4
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+
+export PATH=/programs/bbmap-38.73:$PATH
+
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "$SAMPLE"
+	bbduk.sh in1=$SAMPLE'_R1.fastq.gz' in2=$SAMPLE'_R2.fastq.gz' out1=$SAMPLE'_clean_R1.fastq.gz' out2=$SAMPLE'_clean_R2.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& $SAMPLE'_bbmap.log'
+done
+
+
+#Pieces I want:
+#Adapter trimming
+	ktrim=r k=23 mink=11 hdist=1 tpe tbo
+#Mapping Quality
+	maq=10
+#Minimum Length (maybe)
+	qtrim=r trimq=10 minlen=50
+#Histogram Generate (maybe)
+	bhist=bhist.txt qhist=qhist.txt gchist=gchist.txt aqhist=aqhist.txt lhist=lhist.txt gcbins=auto
+#Trims about 0.5% of bases/reads - could be more stringent but it works and is eliminating without 
+
+
+#TRINITY POST BBMAP
+#Edit the comments out of the script (SpisulaTrinity.sh), Similis vs Solidissima
+chmod u+x Trinity_Solidissima.sh
+nohup ./Trinity_Solidissima.sh >& Trinity_Sol.log &
+
+chmod u+x Trinity_Similis.sh
+nohup ./Trinity_Similis.sh >& Trinity_Sim.log &
+
+tail -f Trinity_Sol.log
+
+
+#TRINITY QC
+#BUSCO
+cp /programs/busco-3.1.0/config/config.ini ./ 
+export BUSCO_CONFIG_FILE=/workdir/hh693/config.ini 
+export PYTHONPATH=/programs/busco-3.1.0/lib/python3.6/site-packages 
+export PATH=/programs/busco-3.1.0/scripts:$PATH 
+tar xvfz metazoa_odb10.tar.gz 
+
+run_BUSCO.py --in ./Trinity_Solidissima.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out trinityBUSCO_Solidissima -f >& BUSCO_log_sol.log &
+run_BUSCO.py --in ./Trinity_Similis.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out trinityBUSCO_Similis -f >& BUSCO_log_sim.log &
+
+
+#!/usr/local/bin/python2.7.15
+generate_plot.py -wd run_trinityBUSCO_Solidissima
+generate_plot.py -wd run_trinityBUSCO_Similis
+#If that doesnt work: generate_plot.py -wd run_trinityBUSCO
+#graph still not working
+
+#BUSCO WITH MOLLUSCA
+run_BUSCO.py --in ./Trinity_Solidissima.fasta --lineage_path ./db_ref/mollusca_odb10 --mode transcriptome --cpu 12 --out mollusca_Solidissima -f >& logs/BUSCO_mollusca_sol_t2.log &
+run_BUSCO.py --in ./Trinity_Similis.fasta --lineage_path ./db_ref/mollusca_odb10 --mode transcriptome --cpu 12 --out mollusca_Similis -f >& logs/BUSCO_mollucsa_sim_t2.log &
+#DID NOT WORK
+generate_plot.py -wd run_BUSCOmollusca_Solidissima &
+generate_plot.py -wd run_BUSCOmollusca_Similis &
+
+#BLASTX 
+makeblastdb -in uniprot_sprot.fasta -dbtype prot
+blastx -query ./trinity_out_Solidissima/Trinity.fasta -db uniprot_sprot.fasta -out blastx_Sol.outfmt6 -evalue 1e-20 -num_threads 8 -max_target_seqs 1 -outfmt 6 &
+blastx -query ./trinity_out_Similis/Trinity.fasta -db uniprot_sprot.fasta -out blastx_sim.outfmt6 -evalue 1e-20 -num_threads 8 -max_target_seqs 1 -outfmt 6 &
+
+export TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx_Sol.outfmt6 Trinity_Solidissima.fasta db_ref/uniprot_sprot.fasta
+$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx_sim.outfmt6 Trinity_Similis.fasta db_ref/uniprot_sprot.fasta
+
+Sol
+#hit_pct_cov_bin	count_in_bin	>bin_below
+100	112	112
+90	42	154
+80	24	178
+70	19	197
+60	27	224
+50	22	246
+40	31	277
+30	22	299
+20	12	311
+10	3	314
+
+Sim
+#hit_pct_cov_bin	count_in_bin	>bin_below
+100	71	71
+90	28	99
+80	27	126
+70	26	152
+60	25	177
+50	19	196
+40	20	216
+30	19	235
+20	11	246
+10	6	252
+
+#GENERAL STATS
+export TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+$TRINITY_HOME/util/TrinityStats.pl Trinity_Similis.fasta
+################################
+## Counts of transcripts, etc.
+################################
+Total trinity 'genes':	158159
+Total trinity transcripts:	314334
+Percent GC: 35.51
+
+########################################
+Stats based on ALL transcript contigs:
+########################################
+
+	Contig N10: 6346
+	Contig N20: 4502
+	Contig N30: 3436
+	Contig N40: 2694
+	Contig N50: 2096
+
+	Median contig length: 496
+	Average contig: 1058.19
+	Total assembled bases: 332626520
+
+
+#####################################################
+## Stats based on ONLY LONGEST ISOFORM per 'GENE':
+#####################################################
+
+	Contig N10: 5461
+	Contig N20: 3618
+	Contig N30: 2621
+	Contig N40: 1900
+	Contig N50: 1317
+
+	Median contig length: 357
+	Average contig: 730.24
+	Total assembled bases: 115494084
+	
+$TRINITY_HOME/util/TrinityStats.pl Trinity_Solidissima.fasta
+################################
+## Counts of transcripts, etc.
+################################
+Total trinity 'genes':	118827
+Total trinity transcripts:	183124
+Percent GC: 35.48
+
+########################################
+Stats based on ALL transcript contigs:
+########################################
+
+	Contig N10: 6394
+	Contig N20: 4462
+	Contig N30: 3362
+	Contig N40: 2628
+	Contig N50: 2031
+
+	Median contig length: 450
+	Average contig: 1002.18
+	Total assembled bases: 183523677
+
+
+#####################################################
+## Stats based on ONLY LONGEST ISOFORM per 'GENE':
+#####################################################
+
+	Contig N10: 5030
+	Contig N20: 3287
+	Contig N30: 2369
+	Contig N40: 1706
+	Contig N50: 1188
+
+	Median contig length: 348
+	Average contig: 693.72
+	Total assembled bases: 82433181
+
+
+#TRIM TRINITY
+#PERL SCRIPT
+chmod u+x extract_longest_from_trinity.sh
+./extract_longest_from_trinity.sh trinity_out_Solidissima/Trinity.fasta > ./Trinity_Sol_longest.fasta
+#Output was 296K, Input was 190M, very quick <2 min
+./extract_longest_from_trinity.sh trinity_out_Similis/Trinity.fasta > ./Trinity_Sim_longest.fasta
+#Output was 277K, Input was 349M, also quick
+# wc -l Trinity_Sim_longest.fasta 
+# 3513 Trinity_Sim_longest.fasta
+# wc -l trinity_out_Similis/Trinity.fasta
+# 628668 trinity_out_Similis/Trinity.fasta
+
+
+#TRANS DECODER
+/programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t Trinity_Solidissima.fasta >& log_trasdecoder_basic_Solp1.log &&
+/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Trinity_Solidissima.fasta >& log_trasdecoder_basic_Solp2.log &
+
+/programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t Trinity_Similis.fasta >& log_trasdecoder_basic_Simp1.log &&
+/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Trinity_Similis.fasta >& log_trasdecoder_basic_Simp2.log &
+
+#Try this after first step
+#/programs/hmmer/bin/hmmscan --cpu 2 --domtblout pfam.domtblout /workdir/hh693/P-fam-A.hmm ./Trinity_Solidissima.fasta.transdecoder_dir/longest_orfs.pep >& log_hmmscan_test.log &
+#PfamA is empty
+
+
+#CONVERT TO FASTA
+bedtools getfasta -fi Trinity_Solidissima.fasta -bed Trinity_Solidissima.fasta.transdecoder.bed -fo Transd_Solidissima.fasta
+bedtools getfasta -fi Trinity_Similis.fasta -bed Trinity_Similis.fasta.transdecoder.bed -fo Transd_Similis.fasta
+
+
+#REPEAT TRINITY QC WITH TRIMMED
+run_BUSCO.py --in ./Transd_Solidissima.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out BUSCOtransd_Solidissima -f >& BUSCO_td_sol.log &
+run_BUSCO.py --in ./Transd_Similis.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out BUSCOtransd_Similis -f >& BUSCO_td_sim.log &
+
+generate_plot.py -wd run_BUSCOtransd_Solidissima
+generate_plot.py -wd run_BUSCOtransd_Similis
+
+blastx -query ./Transd_Solidissima.fasta -db ./db_ref/uniprot_sprot.fasta -out blastx_Sol_td.outfmt6 -evalue 1e-20 -num_threads 4 -max_target_seqs 1 -outfmt 6 &
+blastx -query ./Transd_Similis.fasta -db ./db_ref/uniprot_sprot.fasta -out blastx_Sim_td.outfmt6 -evalue 1e-20 -num_threads 4 -max_target_seqs 1 -outfmt 6 &
+
+export TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx_Sol_td.outfmt6 Transd_Solidissima.fasta db_ref/uniprot_sprot.fasta
+#hit_pct_cov_bin	count_in_bin	>bin_below
+100	119	119
+90	67	186
+80	47	233
+70	28	261
+60	29	290
+50	49	339
+40	37	376
+30	49	425
+20	44	469
+10	15	484
+$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx_Sim_td.outfmt6 Transd_Similis.fasta db_ref/uniprot_sprot.fasta
+#hit_pct_cov_bin	count_in_bin	>bin_below
+100	88	88
+90	43	131
+80	26	157
+70	26	183
+60	27	210
+50	20	230
+40	29	259
+30	23	282
+20	18	300
+10	12	312
+
+
+$TRINITY_HOME/util/TrinityStats.pl Transd_Similis.fasta
+################################
+## Counts of transcripts, etc.
+################################
+Total trinity 'genes':	24473
+Total trinity transcripts:	77629
+Percent GC: 37.43
+
+########################################
+Stats based on ALL transcript contigs:
+########################################
+
+	Contig N10: 8610
+	Contig N20: 6511
+	Contig N30: 5285
+	Contig N40: 4381
+	Contig N50: 3696
+
+	Median contig length: 2105
+	Average contig: 2653.41
+	Total assembled bases: 205981945
+
+
+#####################################################
+## Stats based on ONLY LONGEST ISOFORM per 'GENE':
+#####################################################
+
+	Contig N10: 7655
+	Contig N20: 5748
+	Contig N30: 4600
+	Contig N40: 3782
+	Contig N50: 3143
+
+	Median contig length: 1520
+	Average contig: 2065.15
+	Total assembled bases: 50540487
+	
+$TRINITY_HOME/util/TrinityStats.pl Transd_Solidissima.fasta
+################################
+## Counts of transcripts, etc.
+################################
+Total trinity 'genes':	22792
+Total trinity transcripts:	47988
+Percent GC: 37.45
+
+########################################
+Stats based on ALL transcript contigs:
+########################################
+
+	Contig N10: 8493
+	Contig N20: 6423
+	Contig N30: 5170
+	Contig N40: 4275
+	Contig N50: 3522
+
+	Median contig length: 1765
+	Average contig: 2354.96
+	Total assembled bases: 113009595
+
+
+#####################################################
+## Stats based on ONLY LONGEST ISOFORM per 'GENE':
+#####################################################
+
+	Contig N10: 7033
+	Contig N20: 5137
+	Contig N30: 4016
+	Contig N40: 3249
+	Contig N50: 2670
+
+	Median contig length: 1060.5
+	Average contig: 1658.61
+	Total assembled bases: 37802948
+
+
+#CHOOSE REFERENCE
+
+
+
+#BWA PREPARE REF
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+gatk CreateSequenceDictionary -R Sol_trim_ref.fa  -O Sol_trim_ref.dict
+samtools faidx Sol_trim_ref.fa
+#Index for BWA alignment
+bwa index Sol_trim_ref.fa
+
+
+#BWA ALIGN
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#BWA ALIGN
+ACC=Sol6
+SAM=Solidissima
+REFFASTA=Sol_trim_ref_NoPf.fa
+
+bwa mem -M -t 7 \
+ -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ ${ACC}_R1.fastq  ${ACC}_R2.fastq \
+ | samtools view -Sb - > $ACC.bam &
+#TAKES ~400 CPU MINUTES
+
+
+#BWA INDEX
+#INITIALIZE JAVA
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+#RUN INDEX
+REFFASTA=./Sol_trim_ref_NoPf.fa
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+#DOES NOT WORK IN SCRIPT FOR SOME REASON
+gatk MarkDuplicatesSpark \
+            -I Sim4.bam \
+            -O Sim4.sorted.dedup.bam \
+            -M Sim4.sorted.dedup.txt >& sdedupi_Sim4.log &
+#TAKES ABOUT 40 MINUTES WHEN 1 AT A TIME
+
+
+#HAPLOTYPE CALLER WITH GATK
+#SET WITHIN FUNCTION OR IT IGNORES INPUT
+#HAPLOTYPE CALL INDIVIDUALLY
+#INITIALIZE JAVA
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+REFFASTA=./Sol_trim_ref_NoPf.fa
+GATKDIR=/programs/gatk-4.1.4.0
+#TMP=/workdir/$USER/TrimmedSeq/tmp
+export PATH=$GATKDIR:$PATH
+ACC=Sol
+#mkdir tmpgatk$ACC
+
+gatk --java-options "-Xmx4g"  HaplotypeCaller \
+    --tmp-dir tmpgatk$ACC \
+     -R $REFFASTA \
+     -I $ACC.sorted.dedup.bam  \
+     -ERC GVCF \
+     --native-pair-hmm-threads 10 \
+     --minimum-mapping-quality 30 \
+     -O $ACC.g.vcf >& hc_$ACC.log &
+
+8, 10, 7, 6
+sim5, sim4, sim6
+
+#COMBINE GVCF
+
+
+
+#FILTERING
+
+
+
+#REMOVE PHASING
+
+
+
+#1/1 AND 0/0 NO 0/1
+
+
+
+
+
+
+
+
+
+
+
+
+#Excluding homology searching (IF it reduces total, if it increases include), predict ORFs
+
+gunzip Pfam-A.hmm.gz
+cp /shared_data/genome_db/BLAST_NCBI/swissprot* ./
+
+#Try this after first step
+hmmscan --cpu 8 --domtblout pfam.domtblout /path/to/Pfam-A.hmm transdecoder_dir/longest_orfs.pep
+
+
+
+#THEN GO TO: https://github.com/TransDecoder/TransDecoder/wiki and download Pfam and upload with Filezilla
+#gunzip Pfam-A.hmm.gz
+#/programs/hmmer/bin/hmmconvert Pfam-A.hmm  >  ./Pfam/Pfam-A.hmm
+#/programs/hmmer/bin/hmmpress ./Pfam/Pfam-A.hmm
+#/programs/hmmer/bin/hmmscan --cpu 16 --domtblout pfam.domtblout ./Pfam/Pfam-A.hmm Solidis_Trinity.fasta.transdecoder_dir/longest_orfs.pep 
+#/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Solidis_Trinity.fasta --retain_pfam_hits pfam.domtblout
+/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Solidis_Trinity.fasta
+#EVERYTHING BUT HMM RUNS ON ONLY 100% CPU
+
+
+#BBMAP NOTES
+
+#BACKGROUND: EXTRA TRIM WITH HISTOGRAMS
+SAMPLES=(
+    Sim4
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+
+export PATH=/programs/bbmap-38.73:$PATH
+
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "$SAMPLE"
+	bbduk.sh in1=$SAMPLE'_R1.fastq.gz' in2=$SAMPLE'_R2.fastq.gz' out1=$SAMPLE'_clean_Ex_R1.fastq.gz' out2=$SAMPLE'_clean_Ex_R2.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 qtrim=r trimq=10 minlen=50 bhist=$SAMPLE'bhist.txt' qhist=$SAMPLE'qhist.txt' gchist=$SAMPLE'gchist.txt' aqhist=$SAMPLE'aqhist.txt' lhist=$SAMPLE'lhist.txt' gcbins=auto ktrim=r k=23 mink=11 hdist=1 tpe tbo >& $SAMPLE'_Extra_bbmap.log'
+done
+
+
+
+
+Ktrim is adapter trimming
+
+
+(if your data is very low quality, you may wish to use more sensitive settings of hdist=2 k=21)
+quality trimming: bbduk.sh in=reads.fq out=clean.fq qtrim=r trimq=10
+
+quality filtering: bbduk.sh in=reads.fq out=clean.fq maq=10
+This will discard reads with average quality below 10. If quality-trimming is enabled, the average quality will be calculated on the trimmed read.
+
+Length filtering:
+bbduk.sh in=reads.fq out=clean.fq qtrim=r trimq=10 minlen=100
+This will discard reads shorter than 100bp after trimming to Q10. Alternatively, using “mlf=50” (minlengthfraction=50) would discard reads under 50% of their original length after trimming. Either of these flags apply to any trim operation, whether force-trim (ftr, ftl, ftm), quality-trimming (qtrim), or kmer-trimming (ktrim). “mlf” compares the final length after all trim operations to the initial length before any trim operations.
+
+Histogram generation:
+bbduk.sh in=reads.fq bhist=bhist.txt qhist=qhist.txt gchist=gchist.txt aqhist=aqhist.txt lhist=lhist.txt gcbins=auto
+This will generate histograms of various aspects of the reads – base frequency, quality scores, gc content, average quality, and length. BBMap can generate even more histograms by using mapping information (such as quality accuracy and indel length); BBDuk can also generate these histograms if it is fed a sam file in which the cigar strings use = and X to denote match and mismatch.
+
+Therkildsen: Trimmomatic sliding window approach to trim off the
+rest of the read if the average sequence quality over any
+four bases fell below 15
+
+
+#TRIMMOMATIC
+SAMPLES=(
+    Sim4
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+
+for SAMPLE in "${SAMPLES[@]}"; do
+    echo "$SAMPLE"
+    java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 22 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10:2:true LEADING:3 TRAILING:3 MINLEN:30
+done
+
+
+#Trimmed nothing:
+#LEADING TRAILING, NO MINLEN
+for SAMPLE in "${SAMPLES[@]}"; do
+    echo "$SAMPLE"
+    java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10:2:true LEADING:3 TRAILING:3
+done
+
+#MINLEN:80				trim everything
+    java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10:2:true LEADING:3 TRAILING:3 MINLEN:80
+#MINIMAL PARAMETERS		keep everything
+	java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10
+#MINLEN:50				keep everthing
+	 java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10:2:true LEADING:3 TRAILING:3 MINLEN:50
+
+
+
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10:2:true LEADING:3 TRAILING:3 MINLEN:50
+#TRY THE OTHER ONES
+NexteraPE-PE.fa  TruSeq2-PE.fa  TruSeq2-SE.fa  TruSeq3-PE-2.fa  TruSeq3-PE.fa  TruSeq3-SE.fa
+
+#TRUSEQ2
+Input Read Pairs: 103618581 Both Surviving: 103578940 (99.96%) Forward Only Surviving: 39530 (0.04%) Reverse Only Surviving: 63 (0.00%) Dropped: 48 (0.00%)
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/TruSeq2-PE.fa:2:30:10
+
+#TRUSEQ3-2
+Input Read Pairs: 43052885 Both Surviving: 43038007 (99.97%) Forward Only Surviving: 13625 (0.03%) Reverse Only Surviving: 1248 (0.00%) Dropped: 5 (0.00%)
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/TruSeq3-PE-2.fa:2:30:10
+
+#TRUSEQ3
+Input Read Pairs: 103618581 Both Surviving: 103566192 (99.95%) Forward Only Surviving: 52383 (0.05%) Reverse Only Surviving: 0 (0.00%) Dropped: 6 (0.00%)
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/TruSeq3-PE.fa:2:30:10
+
+
+#NO ILLUMINACLIP
+kept all
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq'  LEADING:3 TRAILING:3 MINLEN:30
+
+
+#SEQUENCE LENGTH = 76
+
+
+
+
+
+#NO NUMBERS AFTER ADAPTORS (DOES NOT RUN)
+
+
+
+#Sol8
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_Trim_1P.fastq' $SAMPLE'_Trim_1U.fastq' $SAMPLE'_Trim_2P.fastq' $SAMPLE'_Trim_2U.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10:2:true LEADING:3 TRAILING:3 MINLEN:80
+
+
+echo $SAMPLE'_R1.fastq.gz'
+
+
+
+
+#PREPARE
+mkdir /workdir/hh693
+cd /workdir/hh693
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sol*fastq* . &
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sim*fastq* . &
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*ref* . &
+cp /programs/trimmomatic/adapters/NexteraPE-PE.fa . &
+
+SAMPLELIST=(Sol8)
+
+#TRIMMOMATIC
+for SAMPLE in ${SAMPLELIST[@]} 
+do
+echo $SAMPLE
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_AdapterClipped_F_paired.fastq' $SAMPLE'_AdapterClipped_F_unpaired.fastq' $SAMPLE'_AdapterClipped_R_paired.fastq' $SAMPLE'_AdapterClipped_R_unpaired.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10
+done
+#REMOVED FRONT END ADAPTERS ON MOST
+Input Read Pairs: 43052885 Both Surviving: 43052759 (100.00%) Forward Only Surviving: 126 (0.00%) Reverse Only Surviving: 0 (0.00%) Dropped: 0 (0.00%)
+#NOT WORKING ON A LATER DATE
+
+
+#TRANSDECODER
+/programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t Solidis_Trinity.fasta
+cp /shared_data/genome_db/BLAST_NCBI/swissprot* ./
+#THEN GO TO: https://github.com/TransDecoder/TransDecoder/wiki and download Pfam and upload with Filezilla
+#gunzip Pfam-A.hmm.gz
+#/programs/hmmer/bin/hmmconvert Pfam-A.hmm  >  ./Pfam/Pfam-A.hmm
+#/programs/hmmer/bin/hmmpress ./Pfam/Pfam-A.hmm
+#/programs/hmmer/bin/hmmscan --cpu 16 --domtblout pfam.domtblout ./Pfam/Pfam-A.hmm Solidis_Trinity.fasta.transdecoder_dir/longest_orfs.pep 
+#/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Solidis_Trinity.fasta --retain_pfam_hits pfam.domtblout
+/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Solidis_Trinity.fasta
+#EVERYTHING BUT HMM RUNS ON ONLY 100% CPU
+
+#BWA PREPARE REF
+#Needed for later gatk steps
+#Set program path
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+gatk CreateSequenceDictionary -R Sol_trim_ref.fa  -O Sol_trim_ref.dict
+samtools faidx Sol_trim_ref.fa
+#Index for BWA alignment
+bwa index Sol_trim_ref.fa
+
+#RENAME FILES
+#Did manually (i.e. messy), see below to copy most
+#Next time make the trim output already .gz (andor named well)
+#chmod u=rwx,g=rx,o=r HGH_bwa_aln_NoPf.sh
+
+#NUMERICAL NOTES
+#Without Pfam Ref.fa > 216M to 78M
+#However, it does look like everything else scaled off that
+#I'm just worried that the headers in the .vcf for position will look insane.
+
+#Previously the .bam for all Sim and all Sol together were each about 30 G
+#Right now, about 18 min in to the first one it is at about 3G, so if each is ~10
+#Then each will take an hour, I have 7 of them.
+#Check previous time for bwa algn to complete: 
+
+-rw-rw-r--  1 hh693 hh693 6.5M May 27 00:16 Sol_trim_ref_NoPf.dict
+-rw-rw-r--  1 hh693 hh693  78M May 27 00:13 Sol_trim_ref_NoPf.fa
+-rw-rw-r--  1 hh693 hh693   17 May 27 00:18 Sol_trim_ref_NoPf.fa.amb
+-rw-rw-r--  1 hh693 hh693 8.9M May 27 00:18 Sol_trim_ref_NoPf.fa.ann
+-rw-rw-r--  1 hh693 hh693  69M May 27 00:18 Sol_trim_ref_NoPf.fa.bwt
+-rw-rw-r--  1 hh693 hh693 2.4M May 27 00:16 Sol_trim_ref_NoPf.fa.fai
+-rw-rw-r--  1 hh693 hh693  18M May 27 00:18 Sol_trim_ref_NoPf.fa.pac
+
+
+-rw-rw-r--  1 hh693 hh693  21M May 26 23:09 Solidis_ref.dict
+-rw-rw-r--  1 hh693 hh693 216M May 26 23:09 Solidis_ref.fa
+-rw-rw-r--  1 hh693 hh693   19 May 26 23:09 Solidis_ref.fa.amb
+-rw-rw-r--  1 hh693 hh693  18M May 26 23:09 Solidis_ref.fa.ann
+-rw-rw-r--  1 hh693 hh693 201M May 26 23:09 Solidis_ref.fa.bwt
+-rw-rw-r--  1 hh693 hh693 8.1M May 26 23:09 Solidis_ref.fa.fai
+-rw-r--r--  1 hh693 hh693 372M May 26 23:09 Solidis_ref.fa.img
+-rw-rw-r--  1 hh693 hh693  51M May 26 23:09 Solidis_ref.fa.pac
+-rw-rw-r--  1 hh693 hh693 101M May 26 23:09 Solidis_ref.fa.sa
+
+
+grep "1/1" Sol7.test.vcf | wc -l
+19324
+grep "0/1" Sol7.test.vcf | wc -l
+27334
+grep "0/0" Sol7.test.vcf | wc -l
+1463913
+grep "0|0" Sol7.test.vcf | wc -l
+2120
+grep "1|1" Sol7.test.vcf | wc -l
+17832
+
+
+
+
+REFFASTA=./Sol_trim_ref_NoPf.fa
+GATKDIR=/programs/gatk-4.1.4.0
+mkdir tmpcombTEST
+export PATH=$GATKDIR:$PATH
+gatk CombineGVCFs --tmp-dir tmpcombTEST -R $REFFASTA --variant Sol8.g.vcf --variant Sol10.g.vcf -O alltest.g.vcf 
+
+
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+
+
+cp -r /programs/spark-2.2.1-bin-hadoop2.7  /workdir/spark
+
+
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+REFFASTA=./Sol_trim_ref_NoPf.fa
+GATKDIR=/programs/gatk-4.1.4.0
+mkdir tmpSol10b
+export PATH=$GATKDIR:$PATH
+ACC=Sol10
+#mkdir tmpgatk$ACC
+
+gatk --java-options "-Xmx4g"  HaplotypeCaller \
+    --tmp-dir tmpSol10b \
+     -R $REFFASTA \
+     -I $ACC.sorted.dedup.bam  \
+     -ERC GVCF \
+     --native-pair-hmm-threads 10 \
+     --minimum-mapping-quality 30 \
+     -O $ACC.g.vcf >& hc_$ACC.log &
+
+
+REFFASTA=./Sol_trim_ref_NoPf.fa
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+gatk MarkDuplicatesSpark -I Sim4.bam -O Sim4.sorted.dedup.bam -M Sim4.sorted.dedup.txt >& sdedupi_Sim4.log && 
+gatk MarkDuplicatesSpark -I Sim5.bam -O Sim5.sorted.dedup.bam -M Sim5.sorted.dedup.txt >& sdedupi_Sim5.log & 
+gatk MarkDuplicatesSpark -I Sim6.bam -O Sim6.sorted.dedup.bam -M Sim6.sorted.dedup.txt >& sdedupi_Sim6.log 
+echo "done (probably)"
+
+
+gatk MarkDuplicatesSpark \
+            -I Sol10.bam \
+            -O Sol10.sorted.dedup.bam \
+            -M Sol10.sorted.dedup.txt >& sdedupi_Sol10.log &
+
+Sol10 did not have index
+REFFASTA=./Sol_trim_ref_NoPf.fa
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+#DOES NOT WORK IN SCRIPT FOR SOME REASON
+gatk MarkDuplicatesSpark \
+            -I Sol6.bam \
+            -O Sol6.sorted.dedup.bam \
+            -M Sol6.sorted.dedup.txt >& sdedupi_Sol6.log &
+
+
+
+
+REFFASTA=./Sol_trim_ref_NoPf.fa
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+#DOES NOT WORK IN SCRIPT FOR SOME REASON
+gatk MarkDuplicatesSpark \
+            -I Sol6.bam \
+            -O Sol6.sorted.dedup.bam \
+            -M Sol6.sorted.dedup.txt >& sdedupi_Sol6.log &
+
+
+gatk MarkDuplicatesSpark \
+            -I ${ACC}.bam \
+            -O ${ACC}.sorted.dedup.bam \
+            -M ${ACC}.sorted.dedup.txt \
+            --tmp-dir $TMP \ 					<- ?
+            --conf 'spark.executor.cores=8'     <- ?
+            
+gatk MarkDuplicatesSpark \
+ 	-I Sim.bam \ 
+	-O Sim.sorted.dedup.bam \ 
+	-M Sim.sorted.dedup.metrics.txt &
+
+
+#Set ACC within .sh
+#nohup ./HGH_bwa_aln.sh >& ./logs/bwa_aln_Sol6.log &
+#Ran manually, not script cause it said "ignored input"
+
+ACC=Sol6
+SAM=Solidissima
+REFFASTA=Sol_trim_ref_NoPf.fa
+
+bwa mem -M -t 7 \
+ -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ ${ACC}_R1.fastq  ${ACC}_R2.fastq \
+ | samtools view -Sb - > $ACC.bam &
+
+
+
+bwa mem -M -t 7 \
+ -R "@RG\tID:Sol8\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ Sol8_R1.fastq  Sol8_R2.fastq \
+ | samtools view -Sb - > Sol8.bam &
+
+bwa mem -M -t 7 \
+ -R "@RG\tID:Sol10\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ Sol10_R1.fastq  Sol10_R2.fastq \
+ | samtools view -Sb - > Sol10.bam &
+
+#Looks like it is working, but log is not being saved 
+#Try next time to do >& bwa_align_$ACC.log
+
+
+bwa mem -M -t 7 \
+ -R "@RG\tID:Sim4\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ Sim4_R1.fastq.gz  Sim4_R2.fastq.gz \
+ | samtools view -Sb - > Sim4.bam &
+
+bwa mem -M -t 7 \
+ -R "@RG\tID:Sim6\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ Sim6_R1.fastq  Sim6_R2.fastq \
+ | samtools view -Sb - > Sim6.bam &
+
+
+bwa mem -M -t 7 \
+ -R "@RG\tID:Sim5\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ Sim5_R1.fastq  Sim5_R2.fastq \
+ | samtools view -Sb - > Sim5.bam
+
+cd TrimmedSeq
+cp * ../
+gzip *fastq*
+#GZIP KEEPS ORIGINAL TOO
+
+
+
+
+
+
+
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sim5g_ATTACTCG_GCCTCTAT_AdapterClipped_R_paired.fastq Sim5_R2.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sim6g_ATTACTCG_AGGATAGG_AdapterClipped_F_paired.fastq Sim6_R1.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sim6g_ATTACTCG_AGGATAGG_AdapterClipped_R_paired.fastq Sim6_R2.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sol10g_ATTACTCG_ACGTCCTG_AdapterClipped_F_paired.fastq Sol10_R1.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sol10g_ATTACTCG_ACGTCCTG_AdapterClipped_R_paired.fastq Sol10_R2.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sol6g_ATTACTCG_TCAGAGCC_AdapterClipped_F_paired.fastq Sol6_R1.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sol6g_ATTACTCG_TCAGAGCC_AdapterClipped_R_paired.fastq Sol6_R2.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sol7g_ATTACTCG_CTTCGCCT_AdapterClipped_F_paired.fastq Sol7_R1.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sol7g_ATTACTCG_CTTCGCCT_AdapterClipped_R_paired.fastq Sol7_R2.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sol8g_ATTACTCG_TAAGATTA_AdapterClipped_F_paired.fastq Sol8_R1.fastq
+[hh693@cbsumm06 TrimmedSeq]$ mv 10975_5776_103466_HVGNYBGXB_10418659_Sol8g_ATTACTCG_TAAGATTA_AdapterClipped_R_paired.fastq Sol8_R2.fastq
+
+
+gatk CreateSequenceDictionary -R Sol_trim_ref_NoPf.fa  -O Sol_trim_ref_NoPf.dict
+samtools faidx Sol_trim_ref.fa
+#Index for BWA alignment
+bwa index Sol_trim_ref.fa
+
+
+
+
+
+#Use hmmpress first?
+/programs/hmmer/bin/hmmconvert Pfam-A.hmm  >  ./Pfam/Pfam-A.hmm
+
+/programs/hmmer/bin/hmmscan --cpu 16 --domtblout pfam.domtblout ./Pfam-A.hmm Solidis_Trinity.fasta.transdecoder_dir/longest_orfs.pep 
+
+
+
+/programs/hmmer/bin/hmmscan
+
+#After 50 minutes of running hmmscan: it is on DN481/DN78000 = 0.6% but also it'a jumping around so I'm not so sure about that
+
+
+
+wget ftp://ftp.sanger.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
+cp /shared_data/genome_db/BLAST_NCBI/swissprot* ./
+
+hmmscan --cpu 16 --domtblout pfam.domtblout /path/to/Pfam-A.hmm transdecoder_dir/longest_orfs.pep
+
+
+#INDEX OUT OF BOUNDS: java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 8 -phred33 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_AdapterClipped_F_paired.fastq' $SAMPLE'_AdapterClipped_F_unpaired.fastq' $SAMPLE'_AdapterClipped_R_paired.fastq' $SAMPLE'_AdapterClipped_R_unpaired.fastq' ILLUMINACLIP:NexteraPE-PE.fa MINLEN:80
+
+#WITH ANY LEVEL OF MIN LENGTH, IT DROPS ALL READS 
+#MINLENGTH 2 KEPT ALL 
+#WORKING BETTER LATER UP TO 40 (80 STILL DID NOT WORK)
+
+
+mkdir TrimmedSeq
+mv *_Ad*_paired* ./TrimmedSeq
+mv *unpaired* ./Unpaired
+
+
+
+
+
+SAMPLE='10975_5776_103466_HVGNYBGXB_10418659_Sol10g_ATTACTCG_ACGTCCTG'
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 10975_5776_103466_HVGNYBGXB_10418659_Sol10g_ATTACTCG_ACGTCCTG_R1.fastq.gz 10975_5776_103466_HVGNYBGXB_10418659_Sol10g_ATTACTCG_ACGTCCTG_R2.fastq.gz $SAMPLE'_MINAdapterClipped_F_paired.fastq' $SAMPLE'_MINAdapterClipped_F_unpaired.fastq' $SAMPLE'_MINAdapterClipped_R_paired.fastq' $SAMPLE'_MINAdapterClipped_R_unpaired.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10 MINLEN:20
+
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 10975_5776_103466_HVGNYBGXB_10418659_Sol10g_ATTACTCG_ACGTCCTG_R1.fastq.gz 10975_5776_103466_HVGNYBGXB_10418659_Sol10g_ATTACTCG_ACGTCCTG_R2.fastq.gz $SAMPLE'_MINAdapterClipped_F_paired.fastq' $SAMPLE'_MINAdapterClipped_F_unpaired.fastq' $SAMPLE'_MINAdapterClipped_R_paired.fastq' $SAMPLE'_MINAdapterClipped_R_unpaired.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10 MINLEN:40
+
+for $SAMPLE in ${test_array[@]} ; do echo $SAMPLE; done
+
+for SOL in ${SAMPLELISTSOL[@]} 
+do
+echo $SAMPLE
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SOL'_R1.fastq.gz' $SOL'_R2.fastq.gz' $SOL'_AdapterClipped_F_paired.fastq' $SOL'_AdapterClipped_F_unpaired.fastq' $SOL'_AdapterClipped_R_paired.fastq' $SOL'_AdapterClipped_R_unpaired.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10 
+done
+
+
+for SAMPLE in ${SAMPLELIST[@]} 
+do
+echo $SAMPLE
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 10 $SAMPLE'_R1.fastq.gz' $SAMPLE'_R2.fastq.gz' $SAMPLE'_AdapterClipped_F_paired.fastq' $SAMPLE'_AdapterClipped_F_unpaired.fastq' $SAMPLE'_AdapterClipped_R_paired.fastq' $SAMPLE'_AdapterClipped_R_unpaired.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10
+done
+
+
+
+#PREPARE
+cd /workdir/hh693
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sol*fastq* . &
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sim*fastq* . &
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*ref* .&
+cp /programs/trimmomatic/adapters/NexteraPE-PE.fa . &
+nohup ./HGH_Trimmomatic.sh SimSampleList.txt TrimmedSeq >& TrimmomaticSimPhed0518.log &
+
+
+nohup ./HGH_Trimmomatic.sh SolSampleList.txt TrimmedSeq >& TrimmomaticSolPhed0518.log &
+
+
+
+
+
+##Trimmommatic
+
+#!/bin/bash
+
+# A subset of the commands used in the pipeline described in Therkildsen and Palumbi: "Practical low-coverage genome-wide sequencing of hundreds of individually barcoded samples for population and evolutionary genomics in non-model species" published in Molecular Ecology Resources.
+# usage: nohup ./Trimmomatic_mph.sh SAMPLELIST OUTPUTDIR >& NYC_trimmomatic.log &
+
+SAMPLELIST=$1 # Filename and path to list of fastq file base names (remove _R1.fastq.gz) e.g. /workdir/mphwork/NYC_WGS_samples.txt
+OUTPUTDIR=$2 # path to directory where output files are to be written, e.g. /workdir/mphwork/trimmed
+##ADAPTERS=$3 # /workdir/Cod/ReferenceSeqs/NexteraPE_NT.fa is a list of adapter/index sequences for Nextera DNA and Nextera XT PE libraries
+
+##### RUN EACH SAMPLE THROUGH PIPELINE #######
+# Loop over each sample
+for SAMPLEFILE in `cat $SAMPLELIST | cut -f1`; do
+SAMPLE=`grep "$SAMPLEFILE" $SAMPLELIST | cut -d "_" -f9-10`
+SAMPLE=$OUTPUTDIR$SAMPLE'_1'
+
+#### CLEANING THE READS ####
+# Remove adapter sequence with Trimmomatic, minlength=80. 
+java -jar /programs/trimmomatic/trimmomatic-0.36.jar PE -threads 22 -phred33 $SAMPLEFILE'_R1.fastq.gz' $SAMPLEFILE'_R2.fastq.gz' $SAMPLE'_AdapterClipped_F_paired.fastq' $SAMPLE'_AdapterClipped_F_unpaired.fastq' $SAMPLE'_AdapterClipped_R_paired.fastq' $SAMPLE'_AdapterClipped_R_unpaired.fastq' ILLUMINACLIP:/programs/trimmomatic/adapters/NexteraPE-PE.fa:2:30:10 MINLEN:80
+done
+
+
+
+
+#May 18th
+Filter before I BWA prepare
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sol*fastq* . &
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sim*fastq* . &
+
+
+/programs/cd-hit-v4.6.8-2017-1208/cd-hit-est -o cdhit -c 0.9 -i Solidis_Filter.fasta -p 1 -d 0 -T 0 &
+mv cdhit Sol_cdhit_ref.fa
+./HGH_prepare_genome_GATK.sh >& prepare_genome.log &
+
+
+
+
+
+java -jar /programs/trimmomatic/trimmomatic-0.39.jar [your_options_here]
+
+Common adapter files are in /programs/trimmomatic/adapters. To run ILLUMINACLIP you will need to specify the path. ILLUMINACLIP:/programs/trimmomatic/adapters/TruSeq3-PE-2.fa:2:30:10 E.g.(you need to change the minimum kept read legth MINLEN):
+
+Palindrome mode (cleaner, short reads with adapters are all included in unpaired_1.fastq, not in paired files):
+java -jar /programs/trimmomatic/trimmomatic-0.39.jar PE -phred33 paired_end_reads_1.fastq paired_end_reads_2.fastq kept_paired_end_reads_1.fastq unpaired_1.fastq kept_paired_end_reads_2.fastq  unpaired_2.fastq ILLUMINACLIP:/programs/trimmomatic/adapters/TruSeq3-PE-2.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:200
+
+Simple mode:
+java -jar /programs/trimmomatic/trimmomatic-0.39.jar PE -phred33 paired_end_reads_1.fastq paired_end_reads_2.fastq kept_paired_end_reads_1.fastq unpaired_1.fastq kept_paired_end_reads_2.fastq  unpaired_2.fastq ILLUMINACLIP:/programs/trimmomatic/adapters/TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:200
+
+
+
+
+
+
+# c = 0.9
+# b = default
+
+#Then do BWA prepare genome
+
+
+
+#Filtering Transcriptome May 10th
+
+cp /home/mph75_0001/shared/Hannah/May2020_workdir/*ref* .
+cp Solidis_ref.fa ./Solidis_filtertest.fa
+
+/programs/cd-hit-v4.6.8-2017-1208/cd-hit -h
+/programs/cd-hit-v4.6.8-2017-1208/cd-hit-est -o cdhit -c 0.98 -i Solidis_filtertest.fa -p 1 -d 0 -b 3 -T 0
+#WHY: CD-HIT can be used to cluster highly similar sequences and retain a single representative sequence per group. Stringent clustering can be done like so
+
+#Code completed in about 15 minutes
+#Created two files: cdhit and cdhit.clstr
+#cdhit looks like the ref.fa
+#cdhit.clstr is a list of which contigs go together?
+
+wc -l Solidis_ref.fa
+#355,144 Solidis_ref.fa
+
+wc -l cdhit
+# 327,990 cdhit
+
+#Not much filtering but some.
+
+#Set up for bam, get rid of others
+mv ./*Sol* ./OldGenomes/
+mv cdhit Sol_cdhit_ref.fa
+ 
+ 
+#Align to Transcriptome
+#Prepare transcriptome
+
+bwa index -p Sol_cdhit_Transcriptome Sol_cdhit_ref.fa &
+#Takes about 8 minutes on the 8 cpu
+
+#Import fastq files
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sol*fastq* . &
+cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sim*fastq* . &
+#Takes time to copy
+
+#Import scripts from previous work
+#HGH_bwa_aln.sh
+#HGH_prepare_genome_GATK.sh
+
+chmod u=rwx,g=rx,o=r HGH_prepare_genome_GATK.sh
+chmod u=rwx,g=rx,o=r HGH_bwa_aln.sh
+
+./HGH_prepare_genome_GATK.sh >& prepare_genome.log &
+
+#Sim 4 and Sol 10 done first, Sim5, Sol 6
+#Rename for simplicity
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sim4g_ATTACTCG_AGGCTATA_R1.fastq.gz ./Sim4_R1.fastq.gz
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sim4g_ATTACTCG_AGGCTATA_R2.fastq.gz ./Sim4_R2.fastq.gz
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sol10g_ATTACTCG_ACGTCCTG_R1.fastq.gz ./Sol10_R1.fastq.gz
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sol10g_ATTACTCG_ACGTCCTG_R2.fastq.gz ./Sol10_R2.fastq.gz
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sim5g_ATTACTCG_GCCTCTAT_R1.fastq.gz ./Sim5_R1.fastq.gz
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sim5g_ATTACTCG_GCCTCTAT_R2.fastq.gz ./Sim5_R2.fastq.gz
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sol6g_ATTACTCG_TCAGAGCC_R1.fastq.gz ./Sol6_R1.fastq.gz
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sol6g_ATTACTCG_TCAGAGCC_R2.fastq.gz ./Sol6_R2.fastq.gz
+
+#Finished processing later
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sol7g_ATTACTCG_CTTCGCCT_R1.fastq.gz ./Sol7_R1.fastq.gz
+mv 10975_5776_103466_HVGNYBGXB_10418659_Sol7g_ATTACTCG_CTTCGCCT_R2.fastq.gz ./Sol7_R2.fastq.gz
+
+
+#First try saving as log.
+
+
+#Run bwa align for one at a time
+#Run in a for loop to step away:
+
+################## FOR LOOP FOR RUNNING MULTIPLE BWA ALIGN IN A ROW ##############
+
+#Put all ACC in one vector as strings, then run For Loop
+declare -a ACCS=("Sim3" "Sol8" "Sim19")
+
+for A in ${ACCS[@]}
+do
+ACKY=$A
+echo $ACKY "begin"
+
+ACC=$ACKY
+SAM=Solidissima
+REFFASTA=Sol_cdhit_ref.fa
+
+bwa mem -M -t 7 \
+ -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ ${ACC}_R1.fastq.gz  ${ACC}_R2.fastq.gz \
+ | samtools view -Sb - > $ACC.bam >& bwa_align_$ACC.log
+
+echo $ACKY "completed"
+
+done
+
+
+
+
+
+
+
+
+#Set ACC within .sh
+#nohup ./HGH_bwa_aln.sh >& ./logs/bwa_aln_Sol6.log &
+#Ran manually, not script cause it said "ignored input"
+
+ACC=Sol6
+SAM=Solidissima
+REFFASTA=Sol_cdhit_ref.fa
+
+bwa mem -M -t 7 \
+ -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ ${ACC}_R1.fastq.gz  ${ACC}_R2.fastq.gz \
+ | samtools view -Sb - > $ACC.bam
+
+
+#Looks like it is working, but log is not being saved 
+
+#Try next time to do >& bwa_align_$ACC.log
+
+#What do I do 
+
+
+
+
+
+
+################ RUN LINES #####################
+grep -v "#" Sim.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' > Sim.test.vcf
+grep "1/1" Sim.test.vcf | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' > Sim.filter.vcf
+grep -v "#" Sol.g.vcf > Sol.test.vcf 
+
+export OMP_NUM_THREADS=16
+
+/programs//R-3.5.0s/bin/R
+#install.packages("tidyverse")
+library("tidyverse")
+Sol <- read.table("Sol.test.vcf")
+Sim <- read.table("Sim.filter.vcf")
+Sim["V11"] = "P"
+
+for (i in 1:nrow(Sol)) {
+chrom <- Sol[i,1]
+pos <- Sol[i,2]
+for (j in 1:nrow(Sim)) {
+if (Sim[j,1]==chrom & Sim[j,2]==pos) {
+Sim[j,4] <- NA
+}
+}
+}
+
+
+
+
+
+
 #Filtering take two: May 2020
 
 ############# Testing Lines ################
@@ -23,7 +1149,7 @@ grep "1/1\|1|1" Sim.test.vcf | wc -l
 		410182 = 1/1 + 1|1
 
 
-	0/0 		5900698
+	0/0 		5,900,698
 	1/1			172045
 	0/1			280143
 	1/0			0
@@ -114,7 +1240,7 @@ Sim[j,4] <- NA
 for (i in 1:nrow(Sol)) {
 chrom <- Sol[i,1]
 pos <- Sol[i,2]
-if (is.integer(i/10000)) {print(i)}
+if (check.integer(i/10000)) {print(i)}
 for (j in 1:nrow(Sim)) {
 if (Sim[j,1]==chrom & Sim[j,2]==pos) {
 Sim[j,4] <- NA
@@ -122,6 +1248,11 @@ print(Sim[j,4])
 }
 }
 }
+
+check.integer <- function(N){
+    !grepl("[^[:digit:]]", format(N,  digits = 20, scientific = FALSE))
+}
+
 #Said that trying to insert "F" didn't work so I just put in NA
 #Piping with >%> doesn't seem to work
 #Doesn't look like its running on 16, but only 4 are available so I think/hope it was
@@ -129,35 +1260,6 @@ print(Sim[j,4])
 if (is.integer(i/10000)) {print(i)}
 #and
 print(Sim[j,4]) #after turning it NA
-
-
-
-
-
-################ RUN LINES #####################
-grep -v "#" Sim.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' > Sim.test.vcf
-grep "1/1" Sim.test.vcf | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' > Sim.filter.vcf
-grep -v "#" Sol.g.vcf > Sol.test.vcf 
-
-/programs//R-3.5.0s/bin/R
-#install.packages("tidyverse")
-library("tidyverse")
-Sol <- read.table("Sol.test.vcf")
-Sim <- read.table("Sim.filter.vcf")
-Sim["V11"] = "P"
-
-for (i in 1:nrow(Sol)) {
-chrom <- Sol[i,1]
-pos <- Sol[i,2]
-for (j in 1:nrow(Sim)) {
-if (Sim[j,1]==chrom & Sim[j,2]==pos) {
-Sim[j,4] <- NA
-}
-}
-}
-
-
-
 
 
 
