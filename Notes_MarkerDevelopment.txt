@@ -1,4 +1,4 @@
-#STARTING OVER AGAIN
+#STARTING OVER AGAIN - JUNE 2020
 #RawReads directory in Spisula folder
 
 
@@ -8,8 +8,10 @@ cd /workdir/hh693
 cp /home/mph75_0001/shared/Hannah/Spisula/MarkerDevelopment/* . &
 
 
+
 #FASTQC
 #FOR ORIGINALS AND TRIMMED
+
 
 
 #BBMAP
@@ -22,7 +24,6 @@ SAMPLES=(
     Sol7
     Sol6
 )
-
 export PATH=/programs/bbmap-38.73:$PATH
 
 for SAMPLE in "${SAMPLES[@]}"; do
@@ -30,17 +31,17 @@ for SAMPLE in "${SAMPLES[@]}"; do
 	bbduk.sh in1=$SAMPLE'_R1.fastq.gz' in2=$SAMPLE'_R2.fastq.gz' out1=$SAMPLE'_clean_R1.fastq.gz' out2=$SAMPLE'_clean_R2.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& $SAMPLE'_bbmap.log'
 done
 
-
 #Pieces I want:
 #Adapter trimming
-	ktrim=r k=23 mink=11 hdist=1 tpe tbo
+#	ktrim=r k=23 mink=11 hdist=1 tpe tbo
 #Mapping Quality
-	maq=10
+#	maq=10
 #Minimum Length (maybe)
-	qtrim=r trimq=10 minlen=50
+#	qtrim=r trimq=10 minlen=50
 #Histogram Generate (maybe)
-	bhist=bhist.txt qhist=qhist.txt gchist=gchist.txt aqhist=aqhist.txt lhist=lhist.txt gcbins=auto
+#	bhist=bhist.txt qhist=qhist.txt gchist=gchist.txt aqhist=aqhist.txt lhist=lhist.txt gcbins=auto
 #Trims about 0.5% of bases/reads - could be more stringent but it works and is eliminating without 
+
 
 
 #TRINITY POST BBMAP
@@ -53,6 +54,755 @@ nohup ./Trinity_Similis.sh >& Trinity_Sim.log &
 
 tail -f Trinity_Sol.log
 
+
+
+#TRINITY QC
+#BUSCO
+cp /programs/busco-3.1.0/config/config.ini ./ 
+export BUSCO_CONFIG_FILE=/workdir/hh693/config.ini 
+export PYTHONPATH=/programs/busco-3.1.0/lib/python3.6/site-packages 
+export PATH=/programs/busco-3.1.0/scripts:$PATH 
+tar xvfz metazoa_odb10.tar.gz 
+
+run_BUSCO.py --in ./Trinity_Solidissima.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out trinityBUSCO_Solidissima -f >& BUSCO_log_sol.log &
+run_BUSCO.py --in ./Trinity_Similis.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out trinityBUSCO_Similis -f >& BUSCO_log_sim.log &
+
+
+#!/usr/local/bin/python2.7.15
+generate_plot.py -wd run_trinityBUSCO_Solidissima
+generate_plot.py -wd run_trinityBUSCO_Similis
+#If that doesnt work: generate_plot.py -wd run_trinityBUSCO
+#graph still not working
+
+#BUSCO WITH MOLLUSCA
+run_BUSCO.py --in ./Trinity_Solidissima.fasta --lineage_path ./db_ref/mollusca_odb10 --mode transcriptome --cpu 12 --out mollusca_Solidissima -f >& logs/BUSCO_mollusca_sol_t2.log &
+run_BUSCO.py --in ./Trinity_Similis.fasta --lineage_path ./db_ref/mollusca_odb10 --mode transcriptome --cpu 12 --out mollusca_Similis -f >& logs/BUSCO_mollucsa_sim_t2.log &
+#DID NOT WORK
+generate_plot.py -wd run_BUSCOmollusca_Solidissima &
+generate_plot.py -wd run_BUSCOmollusca_Similis &
+
+#BLASTX 
+makeblastdb -in uniprot_sprot.fasta -dbtype prot
+blastx -query ./trinity_out_Solidissima/Trinity.fasta -db uniprot_sprot.fasta -out blastx_Sol.outfmt6 -evalue 1e-20 -num_threads 8 -max_target_seqs 1 -outfmt 6 &
+blastx -query ./trinity_out_Similis/Trinity.fasta -db uniprot_sprot.fasta -out blastx_sim.outfmt6 -evalue 1e-20 -num_threads 8 -max_target_seqs 1 -outfmt 6 &
+
+export TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx_Sol.outfmt6 Trinity_Solidissima.fasta db_ref/uniprot_sprot.fasta
+$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx_sim.outfmt6 Trinity_Similis.fasta db_ref/uniprot_sprot.fasta
+
+#GENERAL STATS
+export TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+$TRINITY_HOME/util/TrinityStats.pl Trinity_Similis.fasta
+$TRINITY_HOME/util/TrinityStats.pl Trinity_Solidissima.fasta
+
+
+
+#TRIM TRINITY
+#ISOFORM SELECTION
+# open Trinity.fasta.gene_trans_map in excel
+
+grep ">" trinity_out_Solidissima/Trinity.fasta > sequenceheader_Sol
+
+# open sequenceheader_Sol in excel
+# replace len= with nothing
+# replace > with nothing
+# copy the isoform name and length into the map excel
+# make sure isoforms map
+# then data > sort, column A (gene) A to Z, column C (length) Largest to Smallest
+# all columns and remove duplicates from column A
+# save just the list of isoforms as a .txt
+
+makeblastdb -in Trinity.fasta -dbtype nucl -parse_seqids
+blastdbcmd -db Trinity.fasta -entry_batch LongestIso_Sol.txt -out Trinity_longiso.fasta
+
+
+#REPEAT QC WITH ISOFORM TRIMMED
+export BUSCO_CONFIG_FILE=/workdir/hh693/config.ini 
+export PYTHONPATH=/programs/busco-3.1.0/lib/python3.6/site-packages 
+export PATH=/programs/busco-3.1.0/scripts:$PATH 
+run_BUSCO.py --in ./Trinity_iso_Sol.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out BUSCOiso_Solidissima -f >& BUSCO_iso_sol.log &
+blastx -query ./Trinity_iso_Sol.fasta -db ./db_ref/uniprot_sprot.fasta -out blastx_Sol_iso.outfmt6 -evalue 1e-20 -num_threads 4 -max_target_seqs 1 -outfmt 6 &
+
+run_BUSCO.py --in ./Trinity_iso_Sol.fasta --lineage_path ./db_ref/mollusca_odb10 --mode transcriptome --cpu 8 --out BUSCOiso_Solidissima_Mollusc -f >& BUSCO_iso_moll_sol.log &
+
+generate_plot.py -wd run_BUSCOiso_Solidissima
+
+export TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx_Sol_iso.outfmt6 Trinity_iso_Sol.fasta db_ref/uniprot_sprot.fasta
+$TRINITY_HOME/util/TrinityStats.pl Trinity_iso_Sol.fasta
+
+
+
+#CHOOSE REFERENCE
+#Solidissima to keep code the same, even though isoformed, Sim is likely marginally better
+
+
+
+#BWA PREPARE REF
+#Rename and move if need be.
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+gatk CreateSequenceDictionary -R Sol_ref.fa  -O Sol_ref.dict
+samtools faidx Sol_ref.fa
+#Index for BWA alignment
+bwa index Sol_ref.fa
+
+
+
+#BWA ALIGN
+
+# Basic script code (running it without script for now):
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+ACC=Sol10
+SAM=Solidissima
+REFFASTA=Sol_ref.fa
+
+bwa mem -t 11  -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA ${ACC}_R1.fastq.gz ${ACC}_R2.fastq.gz | samtools view -Sb -@18 -o ${ACC}_iso_output.bam -
+
+
+
+#MARK DUPLICATES
+#SWITCH TO OLD JAVA
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+
+ACC=Sim5
+SAM=Solidissima
+REFFASTA=Sol_ref.fa
+
+gatk MarkDuplicatesSpark \
+-I ${ACC}_iso_output.bam \
+-O ${ACC}.sorted.dedup.bam \
+-M ${ACC}.sorted.dedup.txt \
+--tmp-dir $TMP \
+--conf "spark.executor.cores=7" \
+>& sortdedup_${ACC}.log &
+
+
+
+#HAPLOTYPE CALLER
+#HAPLOTYPE CALL INDIVIDUALLY
+
+#INITIALIZE JAVA
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+REFFASTA=./Sol_ref.fa
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+
+ACCB=Sim4
+
+gatk --java-options "-Xmx4g"  HaplotypeCaller \
+    --tmp-dir $TMP \
+     -R $REFFASTA \
+     -I $ACCB.sorted.dedup.bam  \
+     -ERC GVCF \
+     --native-pair-hmm-threads 4 \
+     --minimum-mapping-quality 30 \
+     -O $ACCB_4.g.vcf >& hc4_$ACCB.log &
+
+
+
+#PARALELIZATION
+
+samtools view -h Sim4_iso_output.bam | grep "@SQ" | less
+118827
+less Sim4_chromosomename | awk '{print $2}' > Sim4_chromosomename.txt
+
+Sim4_chromosomename.txt
+118827
+000000
+ 10000
+ 
+awk 'NR>=1&&NR<=10000' Sim4_chromosomename > Sim4_chrA.txt &
+awk 'NR>=10000&&NR<=20000' Sim4_chromosomename > Sim4_chrB.txt &
+awk 'NR>=20000&&NR<=30000' Sim4_chromosomename > Sim4_chrC.txt &
+awk 'NR>=30000&&NR<=40000' Sim4_chromosomename > Sim4_chrD.txt &
+awk 'NR>=40000&&NR<=50000' Sim4_chromosomename > Sim4_chrE.txt &
+awk 'NR>=50000&&NR<=60000' Sim4_chromosomename > Sim4_chrF.txt &
+awk 'NR>=60000&&NR<=70000' Sim4_chromosomename > Sim4_chrG.txt &
+awk 'NR>=70000&&NR<=80000' Sim4_chromosomename > Sim4_chrH.txt &
+awk 'NR>=80000&&NR<=90000' Sim4_chromosomename > Sim4_chrI.txt &
+awk 'NR>=90000&&NR<=100000' Sim4_chromosomename > Sim4_chrJ.txt &
+awk 'NR>=100000&&NR<=110000' Sim4_chromosomename > Sim4_chrK.txt &
+awk 'NR>=110000&&NR<=118827' Sim4_chromosomename > Sim4_chrL.txt &
+
+
+trinity_out_Solidissima/Trinity.fasta > sequenceheader_Sol
+
+
+java -jar /programs/picard-tools-2.19.2/picard.jar FilterSamReads I=Sim4_iso_output.bam O=Sim4_chrA.bam READ_LIST_FILE=Sim4_chrA.txt FILTER=includeReadList &
+#Took about 13 minutes
+
+
+LETTERS=(
+A
+B
+C
+D
+E
+F
+G
+H
+I
+J
+K
+L
+)
+for i in "${LETTERS[@]}"; do
+	echo "$i"
+	java -jar /programs/picard-tools-2.19.2/picard.jar FilterSamReads I=Sim4.sorted.dedup.bam O='Sim4_chr'$i'.sorted.bam' READ_LIST_FILE='Sim4_chr'$i'.txt' FILTER=includeReadList &
+done
+
+#Super fast
+parallel samtools index ::: *chr*sorted.bam
+
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+REFFASTA=./Sol_ref.fa
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+
+ACCB=Sim4
+i=A
+echo 'Sim4_chr'$i'.sorted.bam'
+
+gatk --java-options "-Xmx4g"  HaplotypeCaller \
+    --tmp-dir $TMP \
+     -R $REFFASTA \
+     -I 'Sim4_chr'$i'.sorted.bam'  \
+     -ERC GVCF \
+     --native-pair-hmm-threads 2 \
+     --minimum-mapping-quality 30 \
+     -O 'Sim4.chr'$i'.g.vcf' >& 'hc2_Sim4_chr'$i'.log' &
+
+
+touch j_haplotypecall.txt
+
+for i in "${LETTERS[@]}"; do
+	echo "gatk --java-options "-Xmx4g"  HaplotypeCaller --tmp-dir $TMP -R $REFFASTA -I 'Sim4_chr'$i'.sorted.bam' -ERC GVCF --native-pair-hmm-threads 2 --minimum-mapping-quality 30 -O 'Sim4.chr'$i'.g.vcf' >& 'hc2_Sim4_chr'$i'.log' &" >> j_haplotypecall.txt
+done
+
+parallel -j 10 < j_haplotypecall.txt
+
+
+#COMBINE GVCF
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+REFFASTA=./Sol_ref.fa
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+
+# the gVCFG files obtained before need to be combined to be used with GenotypeGVCFs tool
+
+echo Combining GVCFs started 
+date
+
+gatk CombineGVCFs \
+     --tmp-dir $TMP \
+     -R $REFFASTA \
+     --variant Sim4.chrA.g.vcf \
+     --variant Sim4.chrB.g.vcf \
+     --variant Sim4.chrC.g.vcf \
+     --variant Sim4.chrD.g.vcf \
+     --variant Sim4.chrE.g.vcf \
+     --variant Sim4.chrF.g.vcf \
+     --variant Sim4.chrG.g.vcf \
+     --variant Sim4.chrH.g.vcf \
+     --variant Sim4.chrI.g.vcf \
+     --variant Sim4.chrJ.g.vcf \
+     --variant Sim4.chrK.g.vcf \
+     --variant Sim4.chrL.g.vcf \
+     -O Sim4_chr.g.vcf  >& all_Sim4_bychr_vcf.log &
+
+cat Sim4.chrA.g.vcf Sim4.chrB.g.vcf Sim4.chrC.g.vcf Sim4.chrD.g.vcf Sim4.chrE.g.vcf Sim4.chrF.g.vcf Sim4.chrG.g.vcf Sim4.chrH.g.vcf Sim4.chrI.g.vcf Sim4.chrJ.g.vcf Sim4.chrK.g.vcf Sim4.chrL.g.vcf > Sim4_chr_cat.g.vcf
+
+echo Run ended
+date
+
+#LIST OF ALL CHROMOSOMES TO DO GVCF BY REGION
+grep ">" Sol_ref.fa | awk '{print $1}' | awk '{ print substr($0,2) }' > chr_list.txt
+
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+
+rm j_combinegvcf.txt
+touch j_combinegvcf.txt
+COUNTER=0
+
+while read REGION; do
+echo $REGION
+COUNTER=$[COUNTER + 1]
+i=A
+if [ $COUNTER -ge 10000 ]; then
+i=B
+fi
+if [ $COUNTER -ge 20000 ]; then
+i=C
+fi
+if [ $COUNTER -ge 30000 ]; then
+i=D
+fi
+if [ $COUNTER -ge 40000 ]; then
+i=E
+fi
+if [ $COUNTER -ge 50000 ]; then
+i=F
+fi
+if [ $COUNTER -ge 60000 ]; then
+i=G
+fi
+if [ $COUNTER -ge 70000 ]; then
+i=H
+fi
+if [ $COUNTER -ge 80000 ]; then
+i=I
+fi
+if [ $COUNTER -ge 90000 ]; then
+i=J
+fi
+if [ $COUNTER -ge 100000 ]; then
+i=K
+fi
+if [ $COUNTER -ge 110000 ]; then
+i=L
+fi
+echo "gatk CombineGVCFs --tmp-dir $TMP -R Sol_ref.fa -L $REGION --variant Sim4.chr'$i'.g.vcf --variant Sim5.g.vcf --variant Sim6.g.vcf --variant Sol6.g.vcf --variant Sol7.g.vcf --variant Sol8.g.vcf --variant Sol10.g.vcf -O vcf_by_chr/'combine'_$REGION'.g.vcf' >& logs/'combinegcvf_chr_'$REGION'.log' " >> j_combinegvcf.txt
+done < chr_list.txt
+
+
+head -5 j_combinegvcf.txt > j_combine_head.txt
+parallel -j 3 < j_combine_head.txt
+
+
+gatk CombineGVCFs --tmp-dir $TMP -R Sol_ref.fa --variant Sim4_chr_cat.g.vcf --variant Sim5.g.vcf --variant Sim6.g.vcf --variant Sol6.g.vcf --variant Sol7.g.vcf --variant Sol8.g.vcf --variant Sol10.g.vcf -O ALL.g.vcf >& logs/ALL_combine.log &
+1219
+
+
+#RE-INDEX THE g.VCFs
+bgzip mySample1.g.vcf
+tabix mySample1.g.vcf.gz
+
+bgzip < Sim4.g.vcf > Sim4.g.vcf.gz &
+bgzip < Sim5.g.vcf > Sim5.g.vcf.gz &
+bgzip < Sim6.g.vcf > Sim6.g.vcf.gz &
+bgzip < Sol6.g.vcf > Sol6.g.vcf.gz &
+bgzip < Sol7.g.vcf > Sol7.g.vcf.gz &
+bgzip < Sol8.g.vcf > Sol8.g.vcf.gz &
+bgzip < Sol10.g.vcf > Sol10.g.vcf.gz &
+
+tabix Sim4.g.vcf.gz &
+tabix Sim5.g.vcf.gz &
+tabix Sim6.g.vcf.gz &
+tabix Sol6.g.vcf.gz &
+tabix Sol7.g.vcf.gz &
+tabix Sol8.g.vcf.gz &
+tabix Sol10.g.vcf.gz &
+
+#Produces .tbi file
+
+
+#Combine g VCF
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp2
+export PATH=$GATKDIR:$PATH
+REFFASTA=Sol_ref.fa
+gatk CombineGVCFs --tmp-dir $TMP -R $REFFASTA --variant Sim4.g.vcf.gz --variant Sim5.g.vcf.gz --variant Sim6.g.vcf.gz --variant Sol6.g.vcf.gz --variant Sol7.g.vcf.gz --variant Sol8.g.vcf.gz --variant Sol10.g.vcf.gz -O all.g.vcf.gz >& combine_g.log
+
+#Combine by region
+REGION=TRINITY_DN0_c0_g1_i13
+gatk CombineGVCFs --tmp-dir $TMP -R $REFFASTA -L $REGION --variant Sim4.g.vcf.gz --variant Sim5.g.vcf.gz --variant Sim6.g.vcf.gz --variant Sol6.g.vcf.gz --variant Sol7.g.vcf.gz --variant Sol8.g.vcf.gz --variant Sol10.g.vcf.gz -O all_$REGION.g.vcf.gz >& combine_$REGION.log
+
+
+export PATH=/programs/bcftools-1.9/bin:$PATH
+CHR=TRINITY_DN0_c0_g2_i1
+bcftools view -r $CHR Sim4.g.vcf.gz -O z -o Sim4.$CHR.g.vcf.gz
+bcftools view -r $CHR Sim5.g.vcf.gz -O z -o Sim5.$CHR.g.vcf.gz
+bcftools view -r $CHR Sim6.g.vcf.gz -O z -o Sim6.$CHR.g.vcf.gz
+bcftools view -r $CHR Sol6.g.vcf.gz -O z -o Sol6.$CHR.g.vcf.gz
+bcftools view -r $CHR Sol7.g.vcf.gz -O z -o Sol7.$CHR.g.vcf.gz
+bcftools view -r $CHR Sol8.g.vcf.gz -O z -o Sol8.$CHR.g.vcf.gz
+bcftools view -r $CHR Sol10.g.vcf.gz -O z -o Sol10.$CHR.g.vcf.gz
+
+tabix Sim4.$CHR.g.vcf.gz &
+tabix Sim5.$CHR.g.vcf.gz &
+tabix Sim6.$CHR.g.vcf.gz &
+tabix Sol6.$CHR.g.vcf.gz &
+tabix Sol7.$CHR.g.vcf.gz &
+tabix Sol8.$CHR.g.vcf.gz &
+tabix Sol10.$CHR.g.vcf.gz &
+
+gatk CombineGVCFs --tmp-dir $TMP -R $REFFASTA --variant Sim4.$CHR.g.vcf.gz --variant Sim5.$CHR.g.vcf.gz --variant Sim6.$CHR.g.vcf.gz --variant Sol6.$CHR.g.vcf.gz --variant Sol7.$CHR.g.vcf.gz --variant Sol8.$CHR.g.vcf.gz --variant Sol10.$CHR.g.vcf.gz -O all_$CHR.g.vcf.gz >& combine_gz_$CHR.log
+
+
+
+
+gatk CombineGVCFs --tmp-dir $TMP -R $REFFASTA --variant Sim4.$CHR.g.vcf --variant Sim5.$CHR.g.vcf --variant Sim6.$CHR.g.vcf --variant Sol6.$CHR.g.vcf --variant Sol7.$CHR.g.vcf --variant Sol8.$CHR.g.vcf --variant Sol10.$CHR.g.vcf -O all.$CHR.g.vcf >& combine_g.$CHR.log
+
+
+
+#DataBase
+gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport \
+      -V Sim4.g.vcf.gz \
+      -V Sim5.g.vcf.gz \
+      -V Sim6.g.vcf.gz \
+      -V Sol8.g.vcf.gz \
+      -V Sol7.g.vcf.gz \
+      -V Sol6.g.vcf.gz \
+      -V Sol10.g.vcf.gz \
+      --genomicsdb-workspace-path spisula_db \
+      --tmp-dir=tmp2 \
+      -L 20
+
+#Change headers so sample names are different
+#What if that is the problem
+#RENAME
+
+bcftools reheader --help
+
+
+SAMPLE=Sol7
+echo "Solidissima Sim5" > samplename.txt
+bcftools reheader -s samplename.txt Sim5.g.vcf.gz -o Sim5_r.g.vcf.gz
+bcftools query -l Sim5_r.g.vcf.gz 
+
+
+
+bcftools reheader -s samplename.txt Sol10.g.vcf.gz -o Sol10_r.g.vcf.gz
+
+
+
+tabix Sim4_r.g.vcf.gz &
+tabix Sim5_r.g.vcf.gz &
+tabix Sim6_r.g.vcf.gz &
+tabix Sol6_r.g.vcf.gz &
+tabix Sol7_r.g.vcf.gz &
+tabix Sol8_r.g.vcf.gz &
+tabix Sol10_r.g.vcf.gz &
+
+
+gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport -V Sim4_r.g.vcf.gz -V Sim5_r.g.vcf.gz -V Sim6_r.g.vcf.gz -V Sol8_r.g.vcf.gz -V Sol7_r.g.vcf.gz -V Sol6_r.g.vcf.gz -V Sol10_r.g.vcf.gz --genomicsdb-workspace-path spisula_db --tmp-dir=tmp2 -L20
+#NOT WORKING NEED L for INDEX but L=20 default doesn't work
+
+
+
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp2
+export PATH=$GATKDIR:$PATH
+REFFASTA=Sol_ref.fa
+CHR=TRINITY_DN10_c1_g1_i7
+gatk CombineGVCFs --tmp-dir $TMP -R $REFFASTA -L $CHR --variant Sim4_r.g.vcf.gz --variant Sim5_r.g.vcf.gz --variant Sim6_r.g.vcf.gz --variant Sol6_r.g.vcf.gz --variant Sol7_r.g.vcf.gz --variant Sol8_r.g.vcf.gz --variant Sol10_r.g.vcf.gz -O all_$CHR.g.vcf.gz >& combine_$CHR.log
+
+gunzip -c Sim4_r.g.vcf.gz > Sim4_r.g.vcf
+gunzip -c Sim5_r.g.vcf.gz > Sim5_r.g.vcf &
+gunzip -c Sim6_r.g.vcf.gz > Sim6_r.g.vcf &
+gunzip -c Sol6_r.g.vcf.gz > Sol6_r.g.vcf &
+gunzip -c Sol7_r.g.vcf.gz > Sol7_r.g.vcf &
+gunzip -c Sol8_r.g.vcf.gz > Sol8_r.g.vcf &
+gunzip -c Sol10_r.g.vcf.gz > Sol10_r.g.vcf &
+
+gatk IndexFeatureFile -F Sol10_r.g.vcf &
+
+
+#Adjust headers
+#OR
+#FreeBayes
+
+FB=/programs/freebayes-v1.3.1/freebayes
+
+REFFASTA=./genome/genome.fa
+
+echo Started at
+date
+$FB -f $REFFASTA \
+SRR1663608.sorted.dedup.bam \
+SRR1663609.sorted.dedup.bam \
+SRR1663610.sorted.dedup.bam \
+SRR1663611.sorted.dedup.bam \
+--min-mapping-quality 30 \
+-r chr2R > fb.vcf
+echo Completed at
+date
+
+
+#ADJUST HEADERS OF BAM FILES
+samtools view -H Sim4.sorted.dedup.bam | grep "@SQ" | less
+samtools view -H Sim4.sorted.dedup.bam | grep -v "@SQ" | less
+>>
+
+FB=/programs/freebayes-v1.3.1/freebayes
+REFFASTA=Sol_ref.fa
+REGION=TRINITY_DN100_c0_g1_i11
+
+$FB -f $REFFASTA \
+Sim4.sorted.dedup.bam \
+Sim5.sorted.dedup.bam \
+Sim6.sorted.dedup.bam \
+Sol6.sorted.dedup.bam \
+Sol7.sorted.dedup.bam \
+Sol8.sorted.dedup.bam \
+Sol10.sorted.dedup.bam \
+--min-mapping-quality 30 \
+-r $REGION > fb_$REGION.vcf >& fb_$REGION.log &
+
+TY_DN100_c0_g1_i11 2       .       C       A       6.55747e-14     .       AB=0;ABP=0;AC=0;AF=0;AN=2;AO=5;CIGAR=1X;DP=55;DPB=55;DPRA=0;EPP=6.91895;EPPR=5.18177;GTI=0;LEN=1;MEANALT=2;MQM=40.4;MQMR=39.9184;NS=1;NUMALT=1;ODDS=37.5659;PAIRED=0.2;PAIREDR=0.367347;PAO=0;PQA=0;PQR=0;PRO=0;QA=176;QR=1678;RO=49;RPL=0;RPP=13.8677;RPPR=109.412;RPR=5;RUN=1;SAF=1;SAP=6.91895;SAR=4;SRF=21;SRP=5.18177;SRR=28;TYPE=snp;technology.ILLUMINA=1        GT:DP:AD:RO:QR:AO:QA:GL 0/0:55:49,5:49:1678:5:176:0,-1.44155,-125.602
+
+@HD     VN:1.6  GO:none SO:coordinate
+@RG     ID:Sim4 SM:Sim4  LB:Solidissima  PL:ILLUMINA
+@PG     ID:bwa  PN:bwa  VN:0.7.17-r1188 CL:bwa mem -t 18 -R @RG\tID:Sim4\tSM:Sim4\tLB:Solidissima\tPL:ILLUMINA Sol_ref.fa Sim4_R1.fastq.gz Sim4_R2.fastq.gz
+
+#Replace header
+samtools view Sim4.sorted.dedup.bam
+
+
+SM:Sim4
+SM:Solidissima
+
+SAMPLES=(
+    Sim4
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+
+for SAMPLE in "${SAMPLES[@]}"; do
+
+for SAMPLE in "${SAMPLES[@]}"
+do
+	 BAM=$SAMPLE.sorted.dedup.bam
+     samtools view -H $BAM > header.sam
+     sed "s/SM:Solidissima/SM:$SAMPLE/" header.sam > header_corrected.sam
+     samtools reheader  header_corrected.sam $BAM
+done
+
+
+for SAMPLE in "${SAMPLES[@]}"
+do
+samtools view -H $BAM | sed "s/Solid5500XL/Solid/" | samtools reheader - $BAM
+done
+
+for SAMPLE in "${SAMPLES[@]}"
+do
+samtools view -h $SAMPLE.sd.sam | sed "s/SM:Solidissima/SM:$SAMPLE/" > 
+done
+
+
+#Try converting to sam first
+samtools view -h Sol10.sorted.dedup.bam > Sol10.sd.sam &
+samtools view -h Sol6.sorted.dedup.bam > Sol6.sd.sam &
+samtools view -h Sol7.sorted.dedup.bam > Sol7.sd.sam &
+samtools view -h Sol8.sorted.dedup.bam > Sol8.sd.sam &
+samtools view -h Sim6.sorted.dedup.bam > Sim6.sd.sam &
+samtools view -h Sim5.sorted.dedup.bam > Sim5.sd.sam &
+samtools view -h Sim4.sorted.dedup.bam > Sim4.sd.sam &
+
+for SAMPLE in "${SAMPLES[@]}"
+do
+echo "samtools view -h $SAMPLE.sd.sam | sed "s/SM:Solidissima/SM:$SAMPLE/" | samtools view -S -b -o $SAMPLE.sd.bam"
+done
+
+for SAMPLE in "${SAMPLES[@]}"
+do
+echo "samtools index -@ 3 $SAMPLE.sd.bam"
+done
+
+#Job list over night
+
+samtools view -h Sim4.sd.sam | sed s/SM:Solidissima/SM:Sim4/ | samtools view -S -b -o Sim4.sd.bam
+samtools view -h Sim5.sd.sam | sed s/SM:Solidissima/SM:Sim5/ | samtools view -S -b -o Sim5.sd.bam
+samtools view -h Sim6.sd.sam | sed s/SM:Solidissima/SM:Sim6/ | samtools view -S -b -o Sim6.sd.bam
+samtools view -h Sol10.sd.sam | sed s/SM:Solidissima/SM:Sol10/ | samtools view -S -b -o Sol10.sd.bam
+samtools view -h Sol8.sd.sam | sed s/SM:Solidissima/SM:Sol8/ | samtools view -S -b -o Sol8.sd.bam
+samtools view -h Sol7.sd.sam | sed s/SM:Solidissima/SM:Sol7/ | samtools view -S -b -o Sol7.sd.bam
+samtools view -h Sol6.sd.sam | sed s/SM:Solidissima/SM:Sol6/ | samtools view -S -b -o Sol6.sd.bam
+samtools index -@ 3 Sim4.sd.bam
+samtools index -@ 3 Sim5.sd.bam
+samtools index -@ 3 Sim6.sd.bam
+samtools index -@ 3 Sol10.sd.bam
+samtools index -@ 3 Sol8.sd.bam
+samtools index -@ 3 Sol7.sd.bam
+samtools index -@ 3 Sol6.sd.bam
+wait
+FB=/programs/freebayes-v1.3.1/freebayes
+REFFASTA=Sol_ref.fa
+REGION=TRINITY_DN1001_c11_g1_i1
+$FB -f $REFFASTA Sim4.sd.bam Sim5.sd.bam Sim6.sd.bam Sol6.sd.bam Sol7.sd.bam Sol8.sd.bam Sol10.sd.bam --min-mapping-quality 30 -r $REGION > fb_$REGION.log &
+REGION=TRINITY_DN100100_c0_g1_i1
+$FB -f $REFFASTA Sim4.sd.bam Sim5.sd.bam Sim6.sd.bam Sol6.sd.bam Sol7.sd.bam Sol8.sd.bam Sol10.sd.bam --min-mapping-quality 30 -r $REGION > fb_$REGION.txt &
+REGION=TRINITY_DN100111_c0_g1_i1
+$FB -f $REFFASTA Sim4.qsd.bam Sim5.sd.bam Sim6.sd.bam Sol6.sd.bam Sol7.sd.bam Sol8.sd.bam Sol10.sd.bam --min-mapping-quality 30 -r $REGION > fb_$REGION.log &
+REGION=TRINITY_DN100111_c1_g1_i1
+$FB -f $REFFASTA Sim4.sd.bam Sim5.sd.bam Sim6.sd.bam Sol6.sd.bam Sol7.sd.bam Sol8.sd.bam Sol10.sd.bam --min-mapping-quality 30 -r $REGION > fb_$REGION.vcf >& fb_$REGION.log &
+REGION=TRINITY_DN100111_c2_g1_i1
+$FB -f $REFFASTA Sim4.sd.bam Sim5.sd.bam Sim6.sd.bam Sol6.sd.bam Sol7.sd.bam Sol8.sd.bam Sol10.sd.bam --min-mapping-quality 30 -r $REGION > fb_$REGION.vcf >& fb_$REGION.log &
+REGION=TRINITY_DN100111_c3_g1_i1
+$FB -f $REFFASTA Sim4.sd.bam Sim5.sd.bam Sim6.sd.bam Sol6.sd.bam Sol7.sd.bam Sol8.sd.bam Sol10.sd.bam --min-mapping-quality 30 -r $REGION > fb_$REGION.vcf >& fb_$REGION.log &
+REGION=TRINITY_DN100111_c4_g1_i1
+$FB -f $REFFASTA Sim4.sd.bam Sim5.sd.bam Sim6.sd.bam Sol6.sd.bam Sol7.sd.bam Sol8.sd.bam Sol10.sd.bam --min-mapping-quality 30 -r $REGION > fb_$REGION.vcf >& fb_$REGION.log &
+
+parallel -j4 < j_samHead_to_bam.txt
+
+for REGION in "${SAMPLES[@]}"
+do
+echo "samtools index -@ 3 $SAMPLE.sd.bam"
+done
+
+while read REGION; do
+  echo "echo $REGION"
+  echo "$FB -f $REFFASTA Sim4.sd.bam Sim5.sd.bam Sim6.sd.bam Sol6.sd.bam Sol7.sd.bam Sol8.sd.bam Sol10.sd.bam --min-mapping-quality 30 -r $REGION > fb_vcf/fb_$REGION.vcf"
+done <chr_list.txt > j_fb_contig.txt
+
+
+parallel -j16 < j_fb_contig.txt
+
+
+
+#FILTERING
+
+
+
+
+
+#1/1 AND 0/0 NO 0/1
+#PHASING IS THE SAME
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################################################
+
+
+#PREVIOUS WORK
+
+grep -v "#" Sim4.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | grep "0/1" | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' | head | less
+
+
+grep -v "#" Sim6.g.vcf.gz | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }'  | less
+| grep "0/1" | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' | less
+
+
+less Sim6.g.vcf.gz |grep -v "#" | less | wc -l
+7529777
+
+less Sim4_chr_cat.g.vcf.gz | grep -v "#" | less | wc -l
+1425924 
+#APPEARS TO SHOW NO DIFFERENCE FROM REFERENCE
+
+
+generate_plot.py -wd run_BUSCOiso_Solidissima_Mollusc
+
+grep -v "#" Sim4.g.vcf | wc -l
+416874
+grep -v "#" Sim5.g.vcf | wc -l
+3263157
+grep -v "#" Sim6.g.vcf | wc -l
+799007
+#Rerun 4 and 6 because they were done without the java lines. 
+
+
+grep -v "#" Sim4.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | grep "0/1" | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' | less
+grep -v "#" Sim4.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | grep "0/1" | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' | wc -l
+grep -v "#" Sim4.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | awk ' {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} ' | wc -l
+
+
+#All	#0/0	#1/1	#0/1	#0|0	#1|1	#All without Q>100 filtering
+31457	25495	1102	1300	104		1585	39666
+
+
+################ RUN LINES #####################
+grep -v "#" Sim.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' > Sim.test.vcf
+grep "1/1" Sim.test.vcf | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' > Sim.filter.vcf
+grep -v "#" Sol.g.vcf > Sol.test.vcf 
+
+export OMP_NUM_THREADS=16
+
+/programs//R-3.5.0s/bin/R
+#install.packages("tidyverse")
+library("tidyverse")
+Sol <- read.table("Sol.test.vcf")
+Sim <- read.table("Sim.filter.vcf")
+Sim["V11"] = "P"
+
+for (i in 1:nrow(Sol)) {
+chrom <- Sol[i,1]
+pos <- Sol[i,2]
+for (j in 1:nrow(Sim)) {
+if (Sim[j,1]==chrom & Sim[j,2]==pos) {
+Sim[j,4] <- NA
+}
+}
+}
+
+
+
+#MISC NOTES OF THINGS THAT DIDNT WORK
+# nohup ./HGH_bwa_aln.sh >& bwa_aln_all.log &
+#bwa mem -M -t 18 -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA ${ACC}_clean_R1.fastq.gz  ${ACC}_clean_R2.fastq.gz > $ACC_i.sam
+# | samtools view -Sb - > $ACC_i.bam
+#4700.661 sec; CPU: 40764.924 sec
+#Sim4
+#Real time: 2791.894 sec; CPU: 46231.244 sec
+
+# nohup at the beginning does not work for bwa mem
+#SET WITHIN FUNCTION OR IT IGNORES INPUT
+
+#QC RESULTS
 
 #TRINITY QC
 #BUSCO
@@ -191,18 +941,6 @@ Stats based on ALL transcript contigs:
 	Total assembled bases: 82433181
 
 
-#TRIM TRINITY
-#PERL SCRIPT
-chmod u+x extract_longest_from_trinity.sh
-./extract_longest_from_trinity.sh trinity_out_Solidissima/Trinity.fasta > ./Trinity_Sol_longest.fasta
-#Output was 296K, Input was 190M, very quick <2 min
-./extract_longest_from_trinity.sh trinity_out_Similis/Trinity.fasta > ./Trinity_Sim_longest.fasta
-#Output was 277K, Input was 349M, also quick
-# wc -l Trinity_Sim_longest.fasta 
-# 3513 Trinity_Sim_longest.fasta
-# wc -l trinity_out_Similis/Trinity.fasta
-# 628668 trinity_out_Similis/Trinity.fasta
-
 
 #TRANS DECODER
 /programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t Trinity_Solidissima.fasta >& log_trasdecoder_basic_Solp1.log &&
@@ -219,6 +957,73 @@ chmod u+x extract_longest_from_trinity.sh
 #CONVERT TO FASTA
 bedtools getfasta -fi Trinity_Solidissima.fasta -bed Trinity_Solidissima.fasta.transdecoder.bed -fo Transd_Solidissima.fasta
 bedtools getfasta -fi Trinity_Similis.fasta -bed Trinity_Similis.fasta.transdecoder.bed -fo Transd_Similis.fasta
+
+
+
+
+#REPEAT QC WITH ISOFORM TRIMMED
+export BUSCO_CONFIG_FILE=/workdir/hh693/config.ini 
+export PYTHONPATH=/programs/busco-3.1.0/lib/python3.6/site-packages 
+export PATH=/programs/busco-3.1.0/scripts:$PATH 
+run_BUSCO.py --in ./Trinity_iso_Sol.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out BUSCOiso_Solidissima -f >& BUSCO_iso_sol.log &
+blastx -query ./Trinity_iso_Sol.fasta -db ./db_ref/uniprot_sprot.fasta -out blastx_Sol_iso.outfmt6 -evalue 1e-20 -num_threads 4 -max_target_seqs 1 -outfmt 6 &
+
+generate_plot.py -wd run_BUSCOiso_Solidissima
+
+export TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx_Sol_iso.outfmt6 Trinity_iso_Sol.fasta db_ref/uniprot_sprot.fasta
+
+#hit_pct_cov_bin	count_in_bin	>bin_below
+100	12	12
+90	10	22
+80	5	27
+70	3	30
+60	3	33
+50	8	41
+40	5	46
+30	8	54
+20	5	59
+10	3	62
+
+$TRINITY_HOME/util/TrinityStats.pl Trinity_iso_Sol.fasta
+
+################################
+## Counts of transcripts, etc.
+################################
+Total trinity 'genes':	118827
+Total trinity transcripts:	118827
+Percent GC: 35.49
+
+########################################
+Stats based on ALL transcript contigs:
+########################################
+
+	Contig N10: 5030
+	Contig N20: 3287
+	Contig N30: 2369
+	Contig N40: 1706
+	Contig N50: 1188
+
+	Median contig length: 348
+	Average contig: 693.72
+	Total assembled bases: 82433181
+
+
+#####################################################
+## Stats based on ONLY LONGEST ISOFORM per 'GENE':
+#####################################################
+
+	Contig N10: 5030
+	Contig N20: 3287
+	Contig N30: 2369
+	Contig N40: 1706
+	Contig N50: 1188
+
+	Median contig length: 348
+	Average contig: 693.72
+	Total assembled bases: 82433181
+
+
 
 
 #REPEAT TRINITY QC WITH TRIMMED
@@ -333,47 +1138,259 @@ Stats based on ALL transcript contigs:
 	Total assembled bases: 37802948
 
 
-#CHOOSE REFERENCE
 
 
 
-#BWA PREPARE REF
-TMP=/workdir/$USER/tmp
+
+
+
+
+SAMPLES=(
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+
+#IGNORED INPUT
+for ACC in "${SAMPLES[@]}"; do
+	echo "$ACC"
+	nohup bwa mem -t 18  -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA ${ACC}_R1.fastq.gz ${ACC}_R2.fastq.gz | samtools view -Sb -@18 -o ${ACC}_iso_output.bam -
+done
+
+
+#MARK DUPLICATES
 GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
 export PATH=$GATKDIR:$PATH
-gatk CreateSequenceDictionary -R Sol_trim_ref.fa  -O Sol_trim_ref.dict
-samtools faidx Sol_trim_ref.fa
-#Index for BWA alignment
-bwa index Sol_trim_ref.fa
+
+ACC=Sim4
+SAM=Solidissima
+REFFASTA=Sol_ref.fa
+
+gatk MarkDuplicatesSpark \
+-I ${ACC}_iso_output.bam \
+-O ${ACC}.sorted.dedup.bam \
+-M ${ACC}.sorted.dedup.txt \
+--tmp-dir $TMP \
+--conf "spark.executor.cores=8" \
+>& sortdedup_${ACC}.log &
+
+
+
+
+
+#HAPLOTYPE CALLER
+
+
+
+
+
+#gatk MarkDuplicatesSpark -I Sim4_iso_output.bam -O Sim4_iso.sorted.dedup.bam -M Sim4_iso.sorted.dedup.txt >& sortdedup_Sim4.log &
+	#WARNING: An illegal reflective access operation has occurred
+	#WARNING: Illegal reflective access by org.apache.spark.unsafe.Platform (file:/programs/gatk-4.1.4.0/gatk-package-4.1.4.0-local.jar) to method java.nio.Bits.unaligned()
+	#WARNING: Please consider reporting this to the maintainers of org.apache.spark.unsafe.Platform
+	#WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+	#WARNING: All illegal access operations will be denied in a future release
+
+${ACC}_iso_output.bam
+
+ACC=Sim4
+
+gatk --java-options "-Xmx4g"  HaplotypeCaller \
+    --tmp-dir $TMP \
+     -R $REFFASTA \
+     -I ${ACC}_iso_output.bam  \
+     -ERC GVCF \
+     --native-pair-hmm-threads 10 \
+     --minimum-mapping-quality 30 \
+     -O $ACC.g.vcf >& hc_$ACC.log &
+
+gatk --java-options "-Xmx4g"  HaplotypeCaller \
+     --tmp-dir $TMP \
+     -R $REFFASTA \
+     -I $ACC_iso_output.bam   \
+     -ERC GVCF \
+     --native-pair-hmm-threads 10 \
+     --minimum-mapping-quality 30 \
+     -O $ACC.g.vcf >& hc_$ACC.log &
+
+
+
+
+#Struggling downline from bwa align. The output is incompatible with GATK
+#Trying lots of different things (see below)
+
+#Jun 19th, trying to run the code from the workshop
+
+
+
+#PERL SCRIPT
+chmod u+x extract_longest_from_trinity.sh
+./extract_longest_from_trinity.sh trinity_out_Solidissima/Trinity.fasta > ./Trinity_Sol_longest.fasta
+#Output was 296K, Input was 190M, very quick <2 min
+./extract_longest_from_trinity.sh trinity_out_Similis/Trinity.fasta > ./Trinity_Sim_longest.fasta
+#Output was 277K, Input was 349M, also quick
+# wc -l Trinity_Sim_longest.fasta 
+# 3513 Trinity_Sim_longest.fasta
+# wc -l trinity_out_Similis/Trinity.fasta
+# 628668 trinity_out_Similis/Trinity.fasta
+
+
+#TRANS DECODER
+/programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t Trinity_Solidissima.fasta >& log_trasdecoder_basic_Solp1.log &&
+/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Trinity_Solidissima.fasta >& log_trasdecoder_basic_Solp2.log &
+
+/programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t Trinity_Similis.fasta >& log_trasdecoder_basic_Simp1.log &&
+/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Trinity_Similis.fasta >& log_trasdecoder_basic_Simp2.log &
+
+#Try this after first step
+#/programs/hmmer/bin/hmmscan --cpu 2 --domtblout pfam.domtblout /workdir/hh693/P-fam-A.hmm ./Trinity_Solidissima.fasta.transdecoder_dir/longest_orfs.pep >& log_hmmscan_test.log &
+#PfamA is empty
+
+#REPEAT TRINITY QC WITH TRIMMED
+run_BUSCO.py --in ./Transd_Solidissima.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out BUSCOtransd_Solidissima -f >& BUSCO_td_sol.log &
+run_BUSCO.py --in ./Transd_Similis.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out BUSCOtransd_Similis -f >& BUSCO_td_sim.log &
+
+generate_plot.py -wd run_BUSCOtransd_Solidissima
+generate_plot.py -wd run_BUSCOtransd_Similis
+
+blastx -query ./Transd_Solidissima.fasta -db ./db_ref/uniprot_sprot.fasta -out blastx_Sol_td.outfmt6 -evalue 1e-20 -num_threads 4 -max_target_seqs 1 -outfmt 6 &
+blastx -query ./Transd_Similis.fasta -db ./db_ref/uniprot_sprot.fasta -out blastx_Sim_td.outfmt6 -evalue 1e-20 -num_threads 4 -max_target_seqs 1 -outfmt 6 &
+
+
+#CONVERT TO FASTA
+bedtools getfasta -fi Trinity_Solidissima.fasta -bed Trinity_Solidissima.fasta.transdecoder.bed -fo Transd_Solidissima.fasta
+bedtools getfasta -fi Trinity_Similis.fasta -bed Trinity_Similis.fasta.transdecoder.bed -fo Transd_Similis.fasta
+
 
 
 #BWA ALIGN
+nohup ./HGH_bwa_aln.sh >& bwa_aln_all.log &
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#BWA ALIGN
+#Basic script code:
 ACC=Sol6
 SAM=Solidissima
-REFFASTA=Sol_trim_ref_NoPf.fa
+REFFASTA=Sol_ref.fa
 
-bwa mem -M -t 7 \
+bwa mem -M -t 22 \
  -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
- ${ACC}_R1.fastq  ${ACC}_R2.fastq \
- | samtools view -Sb - > $ACC.bam &
-#TAKES ~400 CPU MINUTES
+ ${ACC}_clean_R1.fastq.gz  ${ACC}_clean_R2.fastq.gz \
+ | samtools view -Sb - > $ACC_s.bam
+ 
+ACC=Sol8...
+
+#Should take less than 400 CPU minutes per sample
+#FOR LOOP NOT WORKING, DO IT INDIVIDUALLY AS A SCRIPT
+SAMPLES=(
+    Sim4
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+SAM=Solidissima
+REFFASTA=Sol_ref.fa
+for ACC in "${SAMPLES[@]}"; do
+	echo "$ACC"
+	bwa mem -M -t 14 \
+ 		-R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+ 		${ACC}_clean_R1.fastq.gz  ${ACC}_clean_R2.fastq.gz \
+ 		| samtools view -Sb - > $ACC_t.bam >& bwa_aln_${ACC}_t.log
+done
+#PASTE IN ONE LINE AT A TIME (or maybe with no identations)
+#_t stands for testing the for loop and doing them all at once. Sol6.bam and Sol6_t.bam should be identical
+# no & at the end so it does not run them in parallel 
+
+#Finished .bam files are about 5G
+#Trying again on 7 threads because that's the main thing I changed between then and now,
+#If that fails again, try doing it not in a script.
+#Also possible that I did it in the past without .gz (yes), but looks like workshop did it with .gz but only 4 threads
+#Maybe going too fast over two threads is causing it to duplicate headers
+#gunzip -c maintains .gz file too
+
+
+#Running bwa with 7 threads = _s.bam over night
+nohup ./HGH_bwa_aln_s.sh >& bwa_aln_s.log &
+
+#Did not save? or something, looked like it never made the .bam file.
+#Now trying bwa_r which stands for raw. These raw reads were uncut by trimmomatic
+#Compare how Sim6_R1 looks compared to Sim6_clean_R1
+#They look the same to me...
+
+#STILL NOT SAVING THE BAM FILES SOMETHING IS GOING WRONG
+
+
+[[ $Sim6_R1.fastq.gz == $Sim6_clean_R1.fastq.gz ]] && echo yes
+yes
+
+#YUP
+#its almost like the processes are getting interrupted when my computer disconnects from the server
+SAMPLES=(
+    Sim4
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+SAM=Solidissima
+REFFASTA=Sol_ref.fa
+for ACC in "${SAMPLES[@]}"; do
+echo "$ACC"
+bwa mem -M -t 7 \
+-R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA \
+${ACC}_R1.fastq.gz  ${ACC}_R2.fastq.gz \
+| samtools view -Sb - > $ACC_r.bam
+done
+
+#With  >& bwa_aln_${ACC}_r.log   it kept not saving anything
+
+
+SAMPLESB=(
+    Sim4
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+for ACCB in "${SAMPLESB[@]}"; do
+gunzip -c ${ACCB}_clean_R1.fastq.gz > ${ACCB}_clean_R1.fastq
+gunzip -c ${ACCB}_clean_R2.fastq.gz > ${ACCB}_clean_R2.fastq
+done
+
+
+#BWA INDEX
+#MARK DUPLICATES AND HAPLOTYPE CALLER : CREATE SCRIPT
+#INITIALIZE JAVA
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+#RUN INDEX
+REFFASTA=./Sol_ref.fa
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+
+nohup ./HGH_sortdup_GATK.sh >& sort_GATK_all.log &
+#DID NOT WORK
+
+#It appears something in transdecoder is incompatible with 
+#Nope, its the .bam file's fault.
+
+
+A USER ERROR has occurred: Failed to read bam header from Sol6.bam
+ Caused by:Cannot add sequence that already exists in SAMSequenceDictionary
+
+#Try converting to .sam so I can remove bad headers
+samtools view -h Sim6.bam > Sim6.sam &
+samtools view -h Sim6.bam | less #You can view without converting to sam
 
 
 #BWA INDEX
@@ -392,7 +1409,7 @@ gatk MarkDuplicatesSpark \
             -M Sim4.sorted.dedup.txt >& sdedupi_Sim4.log &
 #TAKES ABOUT 40 MINUTES WHEN 1 AT A TIME
 
-
+#HAPLOTYPE CALLER
 #HAPLOTYPE CALLER WITH GATK
 #SET WITHIN FUNCTION OR IT IGNORES INPUT
 #HAPLOTYPE CALL INDIVIDUALLY
@@ -415,10 +1432,9 @@ gatk --java-options "-Xmx4g"  HaplotypeCaller \
      --minimum-mapping-quality 30 \
      -O $ACC.g.vcf >& hc_$ACC.log &
 
-8, 10, 7, 6
-sim5, sim4, sim6
 
 #COMBINE GVCF
+
 
 
 
@@ -426,18 +1442,10 @@ sim5, sim4, sim6
 
 
 
-#REMOVE PHASING
-
 
 
 #1/1 AND 0/0 NO 0/1
-
-
-
-
-
-
-
+#PHASING IS THE SAME
 
 
 
@@ -935,7 +1943,7 @@ done
 
 
 
-#May 18th
+#May 18th 2020
 Filter before I BWA prepare
 cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sol*fastq* . &
 cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sim*fastq* . &

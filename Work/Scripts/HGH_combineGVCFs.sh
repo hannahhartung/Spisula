@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REFFASTA=./Solidis_ref.fa
+REFFASTA=./Sol_ref.fa
 GATKDIR=/programs/gatk-4.1.4.0
 TMP=/workdir/$USER/tmp
 
@@ -15,9 +15,14 @@ echo Combining GVCFs started
 date
 
 gatk CombineGVCFs --tmp-dir $TMP -R $REFFASTA \
-		--variant Sim4.g.vcf --variant Sim5.g.vcf --variant Sim6.g.vcf\
-		--variant Sol6.g.vcf --variant Sol7.g.vcf --variant Sol8.g.vcf --variant Sol10.g.vcf\
-		-O all.g.vcf &
+--variant Sim4.g.vcf.gz \
+--variant Sim5.g.vcf.gz \
+--variant Sim6.g.vcf.gz \
+--variant Sol6.g.vcf.gz \
+--variant Sol7.g.vcf.gz \
+--variant Sol8.g.vcf.gz \
+--variant Sol10.g.vcf.gz \
+-O all.g.vcf.gz &
 
 echo Run ended
 date

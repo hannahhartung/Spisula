@@ -23,7 +23,7 @@ date
 
 #What is Xmz4g?
 gatk --java-options "-Xmx4g"  HaplotypeCaller \
-      --tmp-dir $TMP \
+     --tmp-dir $TMP \
      -R $REFFASTA \
      -I $ACC.sorted.dedup.bam  \
      -ERC GVCF \
