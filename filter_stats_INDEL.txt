@@ -1,5 +1,4 @@
-# IDD, InDel distribution:
-# IDD	[2]id	[3]length (deletions negative)	[4]count
+IDD	[2]id	[3]length (deletions negative)	[4]count
 IDD	0	-28	1
 IDD	0	-27	1
 IDD	0	-26	3
