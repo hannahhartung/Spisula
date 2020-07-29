@@ -7,23 +7,6 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This repository is a collection of my notes and code for developing new diagnostic markers to differenciate 
+This repository is a collection of my notes and code for developing new diagnostic markers to differenciate two subspecies of surf clam.
 
-
-## Including Code
-
-You can include R code in the document as follows:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+The most relavent files for reference are my Notes_MarkerDevelopment.txt and Scripts_MarkerDevelopment.txt which show my process and final code for creating the markers respectively.

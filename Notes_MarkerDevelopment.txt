@@ -148,11 +148,11 @@ grep -v \"#\" output_DN*.vcf | cat >> output_all.vcf
 #FIX TEN TEN HEADER LINES
 cat -n output_DN_all.vcf | sort -uk2 | sort -n | cut -f2- > output_DN_lesshead.vcf
 
-#FILTERING
+#FILTER BY...
 #1/1 AND 0/0 NO 0/1
 #This filtering also removes instances of missing data
 #Sorted for both
-grep "#" output_DN_lesshead.vcf > output_filter_1100.vcf
+#grep "#" output_DN_lesshead.vcf > output_filter_1100.vcf
 #Filtered one at a time to track which matches ref
 grep "#" output_DN_lesshead.vcf > o_filter_Sim1_Sol0.vcf
 grep "#" output_DN_lesshead.vcf > o_filter_Sim0_Sol1.vcf
@@ -175,7 +175,7 @@ $11 ~ "0/0" &&\
 $13 ~ "0/0" &&\
 $14 ~ "0/0"\
 ) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' output_DN_all.vcf >>  o_filter_Sim0_Sol1.vcf &
-#Filter by... 
+
 #QUALITY
 
 #DEPTH
@@ -1060,13 +1060,11 @@ awk '{if($6 > 30) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16}
 awk '{if($6 > 1000) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | wc -l
 53421
 
-bgzip output_filter_1100.vcf
-
-bcftools index output_filter_1100.vcf.gz
-
+bgzip -c o_filter_Sim1_Sol0.vcf > o_filter_Sim1_Sol0.vcf.gz
+bcftools index o_filter_Sim1_Sol0.vcf.gz
 bcftools stats --depth 1,2000,1 --samples-file samplelist.txt o_filter_Sim1_Sol0.vcf.gz  > o_filter_Sim1_Sol0.vcf.vchk 2> output_Sim1Sol0.stats.vchk.err
 
-
+bcftools filter
 
 
 
