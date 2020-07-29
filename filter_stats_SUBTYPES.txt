@@ -1,0 +1,17 @@
+# TSTV, transitions/transversions:
+# TSTV	[2]id	[3]ts	[4]tv	[5]ts/tv	[6]ts (1st ALT)	[7]tv (1st ALT)	[8]ts/tv (1st ALT)
+TSTV	0	36931	32303	1.14	36931	32303	1.14
+# ST, Substitution types:
+# ST	[2]id	[3]type	[4]count
+ST	0	A>C	3590
+ST	0	A>G	8748
+ST	0	A>T	7103
+ST	0	C>A	3560
+ST	0	C>G	1902
+ST	0	C>T	9630
+ST	0	G>A	9671
+ST	0	G>C	1904
+ST	0	G>T	3546
+ST	0	T>A	7187
+ST	0	T>C	8882
+ST	0	T>G	3511

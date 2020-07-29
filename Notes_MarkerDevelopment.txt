@@ -1,4 +1,199 @@
-#STARTING OVER AGAIN - JUNE 2020
+################################# JUST THE CODE ###############################
+#INITIALIZE
+mkdir /workdir/hh693
+cd /workdir/hh693
+cp /home/mph75_0001/shared/Hannah/Spisula/MarkerDevelopment/* . &
+
+#BBMAP
+SAMPLES=(
+    Sim4
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+export PATH=/programs/bbmap-38.73:$PATH
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "$SAMPLE"
+	bbduk.sh in1=$SAMPLE'_R1.fastq.gz' in2=$SAMPLE'_R2.fastq.gz' out1=$SAMPLE'_clean_R1.fastq.gz' out2=$SAMPLE'_clean_R2.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& $SAMPLE'_bbmap.log'
+done
+
+#TRINITY POST BBMAP
+chmod u+x Trinity_Solidissima.sh
+nohup ./Trinity_Solidissima.sh >& Trinity_Sol.log &
+chmod u+x Trinity_Similis.sh
+nohup ./Trinity_Similis.sh >& Trinity_Sim.log &
+
+#SCRIPT EXAMPLE
+TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+TRINITY_OUT=./trinity_out_Similis/
+export PATH=/programs/jellyfish-2.2.3/bin:$PATH
+export PATH=/programs/salmon-0.11.3/bin:$PATH
+export PATH=/programs/bowtie2-2.3.4.3:$PATH
+$TRINITY_HOME/Trinity --seqType fq \
+--left Sim4_clean_R1.fastq.gz,Sim5_clean_R1.fastq.gz,Sim6_clean_R1.fastq.gz \
+--right Sim4_clean_R2.fastq.gz,Sim5_clean_R2.fastq.gz,Sim6_clean_R2.fastq.gz \
+--max_memory 10G  \
+--CPU 11 \
+--output $TRINITY_OUT
+
+#TRIM TRINITY BY ISOFORM SELECTION
+# open Trinity.fasta.gene_trans_map in excel
+grep ">" trinity_out_Solidissima/Trinity.fasta > sequenceheader_Sol
+# open sequenceheader_Sol in excel
+# replace len= with nothing
+# replace > with nothing
+# copy the isoform name and length into the map excel
+# make sure isoforms map
+# then data > sort, column A (gene) A to Z, column C (length) Largest to Smallest
+# all columns and remove duplicates from column A
+# save just the list of isoforms as a .txt
+makeblastdb -in Trinity.fasta -dbtype nucl -parse_seqids
+blastdbcmd -db Trinity.fasta -entry_batch LongestIso_Sol.txt -out Trinity_longiso.fasta
+
+#TRINITY QC
+export BUSCO_CONFIG_FILE=/workdir/hh693/config.ini 
+export PYTHONPATH=/programs/busco-3.1.0/lib/python3.6/site-packages 
+export PATH=/programs/busco-3.1.0/scripts:$PATH 
+run_BUSCO.py --in ./Trinity_iso_Sol.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out BUSCOiso_Solidissima -f >& BUSCO_iso_sol.log &
+blastx -query ./Trinity_iso_Sol.fasta -db ./db_ref/uniprot_sprot.fasta -out blastx_Sol_iso.outfmt6 -evalue 1e-20 -num_threads 4 -max_target_seqs 1 -outfmt 6 &
+run_BUSCO.py --in ./Trinity_iso_Sol.fasta --lineage_path ./db_ref/mollusca_odb10 --mode transcriptome --cpu 8 --out BUSCOiso_Solidissima_Mollusc -f >& BUSCO_iso_moll_sol.log &
+generate_plot.py -wd run_BUSCOiso_Solidissima
+export TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+$TRINITY_HOME/util/analyze_blastPlus_topHit_coverage.pl blastx_Sol_iso.outfmt6 Trinity_iso_Sol.fasta db_ref/uniprot_sprot.fasta
+$TRINITY_HOME/util/TrinityStats.pl Trinity_iso_Sol.fasta
+
+#BWA PREPARE REF
+#Rename copy
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+gatk CreateSequenceDictionary -R Sol_ref.fa  -O Sol_ref.dict
+samtools faidx Sol_ref.fa
+#Index for BWA alignment
+bwa index Sol_ref.fa
+
+#BWA ALIGN
+# Basic script code (change ACC):
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+ACC=Sol10
+SAM=Solidissima
+REFFASTA=Sol_ref.fa
+bwa mem -t 11  -R "@RG\tID:${ACC}\tSM:${ACC}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA ${ACC}_clean_R1.fastq.gz ${ACC}_clean_R2.fastq.gz | samtools view -Sb -@18 -o ${ACC}_iso_output.bam -
+
+#MARK DUPLICATES
+#SWITCH TO OLD JAVA
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+ACC=Sim5
+SAM=Solidissima
+REFFASTA=Sol_ref.fa
+gatk MarkDuplicatesSpark \
+-I ${ACC}_iso_output.bam \
+-O ${ACC}.sorted.dedup.bam \
+-M ${ACC}.sorted.dedup.txt \
+--tmp-dir $TMP \
+--conf "spark.executor.cores=7" \
+>& sortdedup_${ACC}.log &
+
+#LIST OF ALL CHROMOSOMES TO DO BY REGION
+grep ">" Sol_ref.fa | awk '{print $1}' | awk '{ print substr($0,2) }' > chr_list.txt
+
+#(ADJUST HEADERS OF BAM FILES) - FIXED ORIGINAL CODE, NOT NEEDED
+samtools view -H Sim4.sorted.dedup.bam | grep "@SQ" | less
+samtools view -H Sim4.sorted.dedup.bam | grep -v "@SQ" | less
+
+#FREEBAYES
+FB=/programs/freebayes-v1.3.1/freebayes
+REFFASTA=Sol_ref.fa
+REGION=TRINITY_DN100_c0_g1_i11
+$FB -f $REFFASTA \
+Sim4.sorted.dedup.bam \
+Sim5.sorted.dedup.bam \
+Sim6.sorted.dedup.bam \
+Sol6.sorted.dedup.bam \
+Sol7.sorted.dedup.bam \
+Sol8.sorted.dedup.bam \
+Sol10.sorted.dedup.bam \
+--min-mapping-quality 30 \
+-r $REGION > fb_$REGION.vcf >& fb_$REGION.log &
+#JOB LIST OVER ALL CONTIGS IN chr_list.txt
+
+#COMBINE
+#Header
+grep "#" fb_TRINITY_DN100_c0_g1_i11.log | cat >> output.vcf 
+#Then everybody else
+grep -v "#" fb_TRINITY_DN1001*.log | cat >> output.vcf
+#First do ten of them
+#Don't forget the \ around internal quotes
+for i in {0..9}
+do
+echo "echo $i"
+echo "touch fb_vcf/output_DN$i.vcf"
+echo "grep \"#\" fb_vcf/fb_TRINITY_DN0_c2_g1_i1.vcf | cat >> fb_vcf/output_DN$i.vcf"
+echo "grep -v \"#\" fb_vcf/fb_TRINITY_DN$i*.vcf | cat >> fb_vcf/output_DN$i.vcf"
+done > j_combine_fb_vcf.txt
+#Checked to make sure they had all finished by doing tail -300+ to make sure there were 9s
+#All in one
+touch output_all.vcf
+grep \"#\" output_DN1.vcf | cat >> output_all.vcf
+grep -v \"#\" output_DN*.vcf | cat >> output_all.vcf
+#FIX TEN TEN HEADER LINES
+cat -n output_DN_all.vcf | sort -uk2 | sort -n | cut -f2- > output_DN_lesshead.vcf
+
+#FILTERING
+#1/1 AND 0/0 NO 0/1
+#This filtering also removes instances of missing data
+#Sorted for both
+grep "#" output_DN_lesshead.vcf > output_filter_1100.vcf
+#Filtered one at a time to track which matches ref
+grep "#" output_DN_lesshead.vcf > o_filter_Sim1_Sol0.vcf
+grep "#" output_DN_lesshead.vcf > o_filter_Sim0_Sol1.vcf
+#include BEGIN to print as \t delimited
+awk 'BEGIN{FS=OFS="\t"}{if(\
+$10 ~ "0/0" &&\
+$12 ~ "0/0" &&\
+$15 ~ "0/0" &&\
+$16 ~ "0/0" &&\
+$11 ~ "1/1" &&\
+$13 ~ "1/1" &&\
+$14 ~ "1/1"\
+) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' output_DN_all.vcf >> o_filter_Sim1_Sol0.vcf &
+awk 'BEGIN{FS=OFS="\t"}{if(\
+$10 ~ "1/1" &&\
+$12 ~ "1/1" &&\
+$15 ~ "1/1" &&\
+$16 ~ "1/1" &&\
+$11 ~ "0/0" &&\
+$13 ~ "0/0" &&\
+$14 ~ "0/0"\
+) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' output_DN_all.vcf >>  o_filter_Sim0_Sol1.vcf &
+#Filter by... 
+#QUALITY
+
+#DEPTH
+
+#DISTANCE FROM INDELS - may not need because indels could work for rflp
+
+
+
+
+
+
+
+
+
+
+
+########################################### NOTES ####################################
+#STARTING OVER AGAIN - JUNE 2020 and JULY
 #RawReads directory in Spisula folder
 
 
@@ -160,7 +355,7 @@ ACC=Sol10
 SAM=Solidissima
 REFFASTA=Sol_ref.fa
 
-bwa mem -t 11  -R "@RG\tID:${ACC}\tSM:${SAM}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA ${ACC}_R1.fastq.gz ${ACC}_R2.fastq.gz | samtools view -Sb -@18 -o ${ACC}_iso_output.bam -
+bwa mem -t 11  -R "@RG\tID:${ACC}\tSM:${ACC}\tLB:${SAM}\tPL:ILLUMINA" $REFFASTA ${ACC}_R1.fastq.gz ${ACC}_R2.fastq.gz | samtools view -Sb -@18 -o ${ACC}_iso_output.bam -
 
 
 
@@ -541,7 +736,6 @@ date
 #ADJUST HEADERS OF BAM FILES
 samtools view -H Sim4.sorted.dedup.bam | grep "@SQ" | less
 samtools view -H Sim4.sorted.dedup.bam | grep -v "@SQ" | less
->>
 
 FB=/programs/freebayes-v1.3.1/freebayes
 REFFASTA=Sol_ref.fa
@@ -669,37 +863,208 @@ while read REGION; do
 done <chr_list.txt > j_fb_contig.txt
 
 
-parallel -j16 < j_fb_contig.txt
+parallel -j20 < j_fb_contig.txt
+
+
+#CONCATENATE THEM TOGETHER
+touch output.vcf
+#One with header
+cat fb_TRINITY_DN100_c0_g1_i11.log >> output.vcf  
+#OR
+grep "#" fb_TRINITY_DN100_c0_g1_i11.log | cat >> output.vcf 
+#Then everybody else
+grep -v "#" fb_TRINITY_DN1001*.log | cat >> output.vcf
+
+#Looks good, make sure wc is good and that all the collumns are in the same order
+23+18+186 = 227 CHECK
+#Random sample across all fb_vcf indicates they are all in the same order.
+
+#First do ten of them
+#Don't forget the \ around internal quotes
+for i in {0..9}
+do
+echo "echo $i"
+echo "touch fb_vcf/output_DN$i.vcf"
+echo "grep \"#\" fb_vcf/fb_TRINITY_DN0_c2_g1_i1.vcf | cat >> fb_vcf/output_DN$i.vcf"
+echo "grep -v \"#\" fb_vcf/fb_TRINITY_DN$i*.vcf | cat >> fb_vcf/output_DN$i.vcf"
+done > j_combine_fb_vcf.txt
+
+screen
+parallel -j16 < j_combine_fb_vcf.txt
+
+#Checked to make sure they had all finished by doing tail -300+ to make sure there were 9s
+
+#All in one
+touch output_all.vcf
+grep \"#\" output_DN1.vcf | cat >> output_all.vcf
+grep -v \"#\" output_DN*.vcf | cat >> output_all.vcf
 
 
 
 #FILTERING
+#
+grep -v "#" Sim4.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | grep "0/1" | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' | less
+grep -v "#" Sim4.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | grep "0/1" | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' | head | less
+#
+grep -v "##" output_DN0.vcf | awk '{ {print $1} }' | less
+grep -v "#" output_DN0.vcf | awk '{ {print $6} }' | sort -nrk1,1 | head -1
 
 
+nohup ./scripts/filter_vcf.sh output_DN0 >& filter_vcf.log &
+#Filtered everything - might be gatk vs freebayes difference
+awk '{if($7=="PASS") print}' all.filtered.vcf | wc -l
+
+#awk, starts with
+grep -v "##" output_DN0.vcf | awk '{if($10 ~ "1/1") {print $10} }' | less
+
+#Which ones need to match?
+Sol10 = 10			Sim5 = 11
+Sol7 = 12			Sim4 = 13
+Sol6 = 15			Sim6 = 14
+Sol8 = 16
+
+grep -v "##" output_DN0.vcf | awk '{if(\
+$10 ~ "0/0" &&\
+$12 ~ "0/0" &&\
+$15 ~ "0/0" &&\
+$16 ~ "0/0" &&\
+$11 ~ "1/1" &&\
+$13 ~ "1/1" &&\
+$14 ~ "1/1"\
+) {print $7,$10,$11,$12,$13,$14,$15,$16} }' | less
 
 
+grep -v "##" output_DN0.vcf | awk '{if(\
+$10 ~ "0/0" &&\
+$12 ~ "0/0" &&\
+$15 ~ "0/0" &&\
+$16 ~ "0/0" &&\
+$11 ~ "1/1" &&\
+$13 ~ "1/1" &&\
+$14 ~ "1/1"\
+) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' | less
+
+
+#REMOVE FILE NAME FROM CHR
+grep -v "##" output_DN0.vcf | sed 's/fb_vcf.*vcf://g' | less
+#Why does this not find the thing?
+#Because in sed, * is single character, .* is string
+
+#Use this for the individuals
+sed 's/fb_vcf.*vcf://g' output_all.vcf > output_DN_all.vcf
+#Use this for the all
+sed 's/out.*vcf://g' output_all.vcf > output_DN_all.vcf
+
+
+grep -v "##" output_DN_all.vcf | less
+#MY OUTPUT ALL FILE HAS TEN HEADER LINES
+cat -n output_DN_all.vcf | sort -uk2 | sort -n | cut -f2- > output_DN_lesshead.vcf
 
 #1/1 AND 0/0 NO 0/1
 #PHASING IS THE SAME
+#This filtering also removes instances of missing data
+
+#Sorted for both
+grep "#" output_DN_lesshead.vcf > output_filter_1100.vcf
+#Filtered one at a time to track which matches ref
+grep "#" output_DN_lesshead.vcf > o_filter_Sim1_Sol0.vcf
+grep "#" output_DN_lesshead.vcf > o_filter_Sim0_Sol1.vcf
+
+#FIX TAB DELIMETER
+grep "#" output_DN_lesshead.vcf > o_filter_Sim1_Sol0.vcf
+awk 'BEGIN{FS=OFS="\t"}{if(\
+$10 ~ "0/0" &&\
+$12 ~ "0/0" &&\
+$15 ~ "0/0" &&\
+$16 ~ "0/0" &&\
+$11 ~ "1/1" &&\
+$13 ~ "1/1" &&\
+$14 ~ "1/1"\
+) {print} }' output_DN_all.vcf >> o_filter_Sim1_Sol0.vcf &
+
+awk 'BEGIN{FS=OFS="\t"}{if(\
+$10 ~ "1/1" &&\
+$12 ~ "1/1" &&\
+$15 ~ "1/1" &&\
+$16 ~ "1/1" &&\
+$11 ~ "0/0" &&\
+$13 ~ "0/0" &&\
+$14 ~ "0/0"\
+) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' output_DN_all.vcf >>  o_filter_Sim0_Sol1.vcf &
+
+#PHASED
+#Filtered one at a time to track which matches ref
+grep "#" output_DN_lesshead.vcf > o_filter_Sim1_Sol0_phased.vcf
+grep "#" output_DN_lesshead.vcf > o_filter_Sim0_Sol1_phased.vcf
+grep "#" output_DN_lesshead.vcf > o_filter_Sim1_Sol0_phased_p.vcf
+awk 'BEGIN{FS=OFS="\t"}{if(\
+($10 ~ "0/0" || $10 ~ "0p0") &&\
+($12 ~ "0/0" || $12 ~ "0p0") &&\
+($15 ~ "0/0" || $15 ~ "0p0") &&\
+($16 ~ "0/0" || $16 ~ "0p0") &&\
+($11 ~ "1/1" || $11 ~ "1p1") &&\
+($13 ~ "1/1" || $13 ~ "1p1") &&\
+($14 ~ "1/1" || $14 ~ "1p1") \
+) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' output_all_unphased.vcf>> o_filter_Sim1_Sol0_phased_p.vcf
+
+awk 'BEGIN{FS=OFS="\t"}{if(\
+($10 ~ "1/1" || $10 ~ "1|1") &&\
+($12 ~ "1/1" || $12 ~ "1|1") &&\
+($15 ~ "1/1" || $15 ~ "1|1") &&\
+($16 ~ "1/1" || $16 ~ "1|1") &&\
+($11 ~ "0/0" || $11 ~ "0|0") &&\
+($13 ~ "0/0" || $13 ~ "0|0") &&\
+($14 ~ "0/0" || $14 ~ "0|0") \
+) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' output_all_unphased.vcf >>  o_filter_Sim0_Sol1_phased.vcf
+
+awk 'BEGIN{FS=OFS="\t"}{if(\
+($10 ~ "1/1")\
+) {print $1,$10} }' output_DN_all.vcf | less
+
+grep -v "##" output_DN_all.vcf | wc -l
+2815714 OR -v "#" 2815704
+grep -v "##" output_DN_lesshead.vcf | wc -l
+Expecting 2815705 YES
+grep -v "##" output_filter_1100.vcf | wc -l
+86025 OR -v "#" 86024
+
+grep -v "##" o_filter_Sim1_Sol0_phased.vcf | wc -l
+1619557
+grep -v "##" o_filter_Sim0_Sol1_phased.vcf | wc -l
+1406293
+#ADDS TO MORE THAN THE TOTAL??
+#THE | SEEMS TO ACT AS A WILD CARD
+
+sed 's/[|]/p/g' output_DN_all.vcf > output_all_unphased.vcf
+grep -v "##" o_filter_Sim1_Sol0_phased_p.vcf | wc -l
+85955
+#DOES NOT ADD ANYTHING - INFACT IM NOT SURE THERE ARE ANY
+
+grep -v "##" o_filter_Sim1_Sol0.vcf | wc -l
+85955
+grep -v "##" o_filter_Sim0_Sol1.vcf | wc -l
+71
+#THIS MAKES SENSE, MOST SITES THE SIMILIS IS DIFFERENT AND SOL MATCHES
+
+grep -v "##" output_filter_1100.vcf | less
+grep -v "##" output_DN_all.vcf | less
 
 
+#FILTER BY QUALITY OR OTHER METRICS
+#How many are lost when minumum quality is 100
+awk '{if($6 > 100) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | wc -l
+81550
+#Not a big loss
+awk '{if($6 > 30) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | wc -l
+85079
+awk '{if($6 > 1000) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | wc -l
+53421
 
+bgzip output_filter_1100.vcf
 
+bcftools index output_filter_1100.vcf.gz
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+bcftools stats --depth 1,2000,1 --samples-file samplelist.txt o_filter_Sim1_Sol0.vcf.gz  > o_filter_Sim1_Sol0.vcf.vchk 2> output_Sim1Sol0.stats.vchk.err
 
 
 
@@ -729,6 +1094,14 @@ parallel -j16 < j_fb_contig.txt
 
 
 #PREVIOUS WORK
+
+sed 's/^.* fb_vcf/fb_*.vcf:
+sed 's/foo/bar/g' hello.txt
+sed 's/fb_vcf*:/bar/g' 
+
+grep -v "##" output_DN0.vcf | sed 's/^.*fb_vcf*:/t/g' | less
+grep -v "##" output_DN0.vcf |sed 's/fb_vcf.*vcf://g' | less
+
 
 grep -v "#" Sim4.g.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | grep "0/1" | awk '{if($3>100) {print $2,$3,$4,$5,$6,$7,$8,$9,$10,$1} }' | head | less
 
