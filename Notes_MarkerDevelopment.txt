@@ -405,7 +405,7 @@ gatk --java-options "-Xmx4g"  HaplotypeCaller \
      -O $ACCB_4.g.vcf >& hc4_$ACCB.log &
 
 
-
+#Date: June 29 2020
 #PARALELIZATION
 
 samtools view -h Sim4_iso_output.bam | grep "@SQ" | less
@@ -586,7 +586,7 @@ parallel -j 3 < j_combine_head.txt
 gatk CombineGVCFs --tmp-dir $TMP -R Sol_ref.fa --variant Sim4_chr_cat.g.vcf --variant Sim5.g.vcf --variant Sim6.g.vcf --variant Sol6.g.vcf --variant Sol7.g.vcf --variant Sol8.g.vcf --variant Sol10.g.vcf -O ALL.g.vcf >& logs/ALL_combine.log &
 1219
 
-
+#Date: July 6 2020
 #RE-INDEX THE g.VCFs
 bgzip mySample1.g.vcf
 tabix mySample1.g.vcf.gz
@@ -648,6 +648,7 @@ gatk CombineGVCFs --tmp-dir $TMP -R $REFFASTA --variant Sim4.$CHR.g.vcf.gz --var
 gatk CombineGVCFs --tmp-dir $TMP -R $REFFASTA --variant Sim4.$CHR.g.vcf --variant Sim5.$CHR.g.vcf --variant Sim6.$CHR.g.vcf --variant Sol6.$CHR.g.vcf --variant Sol7.$CHR.g.vcf --variant Sol8.$CHR.g.vcf --variant Sol10.$CHR.g.vcf -O all.$CHR.g.vcf >& combine_g.$CHR.log
 
 
+#Date: July 21 2020
 
 #DataBase
 gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport \
@@ -997,15 +998,17 @@ $14 ~ "0/0"\
 grep "#" output_DN_lesshead.vcf > o_filter_Sim1_Sol0_phased.vcf
 grep "#" output_DN_lesshead.vcf > o_filter_Sim0_Sol1_phased.vcf
 grep "#" output_DN_lesshead.vcf > o_filter_Sim1_Sol0_phased_p.vcf
+
+grep "#" o_filter_Sim1_Sol0.vcf > filter_no_missing.vcf
 awk 'BEGIN{FS=OFS="\t"}{if(\
-($10 ~ "0/0" || $10 ~ "0p0") &&\
-($12 ~ "0/0" || $12 ~ "0p0") &&\
-($15 ~ "0/0" || $15 ~ "0p0") &&\
-($16 ~ "0/0" || $16 ~ "0p0") &&\
-($11 ~ "1/1" || $11 ~ "1p1") &&\
-($13 ~ "1/1" || $13 ~ "1p1") &&\
-($14 ~ "1/1" || $14 ~ "1p1") \
-) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' output_all_unphased.vcf>> o_filter_Sim1_Sol0_phased_p.vcf
+($10 ~ "0/0" || $10 ~ "1/1") &&\
+($12 ~ "0/0" || $12 ~ "1/1") &&\
+($15 ~ "0/0" || $15 ~ "1/1") &&\
+($16 ~ "0/0" || $16 ~ "1/1") &&\
+($11 ~ "1/1" || $11 ~ "0/0") &&\
+($13 ~ "1/1" || $13 ~ "0/0") &&\
+($14 ~ "1/1" || $14 ~ "0/0") \
+) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' output_DN_all.vcf>> filter_no_missing.vcf
 
 awk 'BEGIN{FS=OFS="\t"}{if(\
 ($10 ~ "1/1" || $10 ~ "1|1") &&\
@@ -1052,7 +1055,7 @@ grep -v "##" output_DN_all.vcf | less
 
 #FILTER BY QUALITY OR OTHER METRICS
 #How many are lost when minumum quality is 100
-awk '{if($6 > 100) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | wc -l
+awk '{if($6 > 100) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | grep -v "#" | wc -l
 81550
 #Not a big loss
 awk '{if($6 > 30) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | wc -l
@@ -1064,7 +1067,56 @@ bgzip -c o_filter_Sim1_Sol0.vcf > o_filter_Sim1_Sol0.vcf.gz
 bcftools index o_filter_Sim1_Sol0.vcf.gz
 bcftools stats --depth 1,2000,1 --samples-file samplelist.txt o_filter_Sim1_Sol0.vcf.gz  > o_filter_Sim1_Sol0.vcf.vchk 2> output_Sim1Sol0.stats.vchk.err
 
-bcftools filter
+bcftools filter --include 'MIN(FORMAT/DP)>10' o_tab_S1S0.vcf | grep -v "##" | wc -l
+27k <- individual
+bcftools filter --include 'MIN(INFO/DP)>10' o_tab_S1S0.vcf | grep -v "##" | wc -l
+85k <- group 
+bcftools filter --include 'INFO/DP>200' o_tab_S1S0.vcf | grep -v "##" | wc -l
+39253
+bcftools filter --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.vcf | grep -v "##" | wc -l
+34028
+
+bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.vcf | bcftools filter --include 'TYPE="snp"' | grep -v "##" | wc -l
+bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.vcf | bcftools filter --include 'QUAL>100' | bcftools filter --include 'TYPE="snp"' | grep -v "##" | wc -l
+27580
+#NOTE PUTTING A CAP ON THE QUALITY REMOVES A LOT
+
+
+#CHART
+#TOTAL
+2,815,704
+#NO MISSING
+307,735
+#DIANOGSTIC
+85,954
+#DEPTH (200-1500)
+34,028
+#DISTANCE FROM INDELS 
+33,468
+#SNPs only
+27,830
+
+
+awk '{if($6 > 100 && ) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | wc -l
+
+
+#FIX THE VCFTOOLS NOT LIKING THE HEASDER
+#Quick workaround: index the file with tabix
+#first compress - ERROR: Failed to parse TBX_VCF, was wrong -p [type] used?
+#CAUSE THESE ONES ARE STILL NOT TAB-DELIMETERED
+
+o_filter_Sim1_Sol0.vcf
+grep "#" o_filter_Sim1_Sol0.vcf > o_tab_S1S0.vcf
+grep -v "#" o_filter_Sim1_Sol0.vcf | tr " " "\t" >> o_tab_S1S0.vcf
+
+bgzip -c o_tab_S1S0.vcf > o_tab_S1S0.vcf.gz
+
+
+
+
+samtools flagstat Sim6_iso_ouput.bam
+
+
 
 
 
@@ -1093,7 +1145,11 @@ bcftools filter
 
 #PREVIOUS WORK
 
-sed 's/^.* fb_vcf/fb_*.vcf:
+#Citation for parallel
+#O. Tange (2011): GNU Parallel - The Command-Line Power Tool,
+#  ;login: The USENIX Magazine, February 2011:42-47.
+
+sed s/^.* fb_vcf/fb_*.vcf:
 sed 's/foo/bar/g' hello.txt
 sed 's/fb_vcf*:/bar/g' 
 
@@ -1887,6 +1943,7 @@ rest of the read if the average sequence quality over any
 four bases fell below 15
 
 
+#Date: June 3 2020
 #TRIMMOMATIC
 SAMPLES=(
     Sim4
@@ -2314,7 +2371,7 @@ done
 
 
 
-#May 18th 2020
+#Date: May 18 2020
 Filter before I BWA prepare
 cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sol*fastq* . &
 cp /home/mph75_0001/shared/Hannah/Trials_previous_MarkerDevelopment/Mar2020_workingdir/*Sim*fastq* . &
@@ -2503,7 +2560,7 @@ Sim[j,4] <- NA
 
 
 
-#Filtering take two: May 2020
+#Date: May 2020
 
 ############# Testing Lines ################
 
@@ -2644,7 +2701,7 @@ print(Sim[j,4]) #after turning it NA
 
 
 
-#April 2020
+#Date: April 2020
 #Code for filtering
 grep "#" Sim.g.vcf > Sim.test.vcf
 grep -v "#" Sim.subset.vcf | awk '{ {print $10,$1,$2,$3,$4,$5,$6,$7,$8,$9} }' | tail

@@ -1,4 +1,110 @@
 #GBS
 
 #DOWNLOAD PILOT DATA
+#Date: June 26 2020
 wget -nH -np -N -r --cut-dirs 2 --no-check-certificate --user hare --password Represent-Woolen-Opportunity-Absence-6 https://umgcdownload.msi.umn.edu/hare/200518_NB551498_0045_AH2NKMBGXF/Hare_Project_001
+
+#Date: June 29 2020
+#BBMAP
+SAMPLES=(
+    CUP_265
+    CUP_352
+    GA_007
+    GA_008
+    MCX_082
+    PEC_011
+    SHN_126
+    TEST_010
+)
+export PATH=/programs/bbmap-38.73:$PATH
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "$SAMPLE"
+	bbduk.sh in=$SAMPLE'_R1.fastq.gz' out=$SAMPLE'_clean_R1.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& $SAMPLE'_bbmap.log'
+done
+#Reduced size slightly but not too much
+
+
+#BWA ALIGN TO SOL REFERENCE
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+REFFASTA=Sol_ref.fa
+
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "bwa mem -t 8 -R '@RG\tID:${SAMPLE}\tSM:${SAMPLE}\tLB:${SAMPLE}\tPL:ILLUMINA' Sol_ref.fa ${SAMPLE}_clean_R1.fastq.gz | samtools view -Sb -@8 -o ${SAMPLE}_iso_output.bam -"
+done > j_GBS_bwa.txt
+
+parallel -j 3 < j_GBS_bwa.txt
+#less -S do not wrap lines
+
+#Check what percent mapped
+samtools flagstat CUP_265_iso_output.bam > CUP_265_flagstat.txt	&		58.69%
+samtools flagstat CUP_352_iso_output.bam > CUP_352_flagstat.txt &		57.88%
+samtools flagstat GA_007_iso_output.bam > GA_007_flagstat.txt &			58.67%
+samtools flagstat GA_008_iso_output.bam > GA_008_flagstat.txt &			58.43%
+samtools flagstat MCX_082_iso_output.bam > MCX_082_flagstat.txt &		57.89%
+samtools flagstat PEC_011_iso_output.bam > PEC_011_flagstat.txt &		43.25%
+samtools flagstat SHN_126_iso_output.bam > SHN_126_flagstat.txt &		55.46%
+samtools flagstat TEST_010_iso_output.bam > TEST_010_flagstat.txt &		60.94%
+
+#What were the flagstats for the originals?
+#About 95%
+
+#Mark Duplicates
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+
+CUP_265_iso_output.bam
+MCX_082_iso_output.bam 
+CUP_352_iso_output.bam
+PEC_011_iso_output.bam  
+GA_007_iso_output.bam
+SHN_126_iso_output.bam
+TEST_010_iso_output.bam
+GA_008_iso_output.bam
+
+ACC=CUP_265
+REFFASTA=Sol_ref.fa
+gatk MarkDuplicatesSpark \
+-I ${ACC}_iso_output.bam \
+-O ${ACC}.sorted.dedup.bam \
+-M ${ACC}.sorted.dedup.txt \
+--tmp-dir $TMP \
+--conf "spark.executor.cores=8" \
+>& sortdedup_${ACC}.log &
+
+touch j_GBS_markdups_and_freebayes.txt
+
+for ACC in "${SAMPLES[@]}"; do
+	echo "gatk MarkDuplicatesSpark -I ${ACC}_iso_output.bam -O ${ACC}.sorted.dedup.bam -M ${ACC}.sorted.dedup.txt --tmp-dir $TMP --conf "spark.executor.cores=8" >& sortdedup_${ACC}.log"
+done
+
+gatk MarkDuplicatesSpark -I CUP_265_iso_output.bam -O CUP_265.sorted.dedup.bam -M CUP_265.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_CUP_265.log
+gatk MarkDuplicatesSpark -I CUP_352_iso_output.bam -O CUP_352.sorted.dedup.bam -M CUP_352.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_CUP_352.log
+gatk MarkDuplicatesSpark -I GA_007_iso_output.bam -O GA_007.sorted.dedup.bam -M GA_007.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_GA_007.log
+gatk MarkDuplicatesSpark -I GA_008_iso_output.bam -O GA_008.sorted.dedup.bam -M GA_008.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_GA_008.log
+gatk MarkDuplicatesSpark -I MCX_082_iso_output.bam -O MCX_082.sorted.dedup.bam -M MCX_082.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_MCX_082.log
+gatk MarkDuplicatesSpark -I PEC_011_iso_output.bam -O PEC_011.sorted.dedup.bam -M PEC_011.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_PEC_011.log
+gatk MarkDuplicatesSpark -I SHN_126_iso_output.bam -O SHN_126.sorted.dedup.bam -M SHN_126.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_SHN_126.log
+gatk MarkDuplicatesSpark -I TEST_010_iso_output.bam -O TEST_010.sorted.dedup.bam -M TEST_010.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_TEST_010.log
+
+parallel -j 1 < j_GBS_markdups_and_freebayes.txt
+
+#Date: July 30 2020
+#I had an extra "\" in the line and it was too confused to run
+
+#FreeBayes
+screen
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+FB=/programs/freebayes-v1.3.1/freebayes
+$FB -f Sol_ref.fa CUP_265.sorted.dedup.bam CUP_352.sorted.dedup.bam MCX_082.sorted.dedup.bam PEC_011.sorted.dedup.bam GA_007.sorted.dedup.bam GA_008.sorted.dedup.bam SHN_126.sorted.dedup.bam TEST_010.sorted.dedup.bam --min-mapping-quality 30 > fb_pilot_GBS.vcf >& fb_GBS.log &
+
+
