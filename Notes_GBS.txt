@@ -108,3 +108,52 @@ FB=/programs/freebayes-v1.3.1/freebayes
 $FB -f Sol_ref.fa CUP_265.sorted.dedup.bam CUP_352.sorted.dedup.bam MCX_082.sorted.dedup.bam PEC_011.sorted.dedup.bam GA_007.sorted.dedup.bam GA_008.sorted.dedup.bam SHN_126.sorted.dedup.bam TEST_010.sorted.dedup.bam --min-mapping-quality 30 > fb_pilot_GBS.vcf >& fb_GBS.log &
 
 
+#Date: July 31 2020
+#vcftools FST
+#calculate an Fst estimate from Weir and Cockerham’s 1984 paper
+touch GBS_samples.txt
+nano GBS_samples.txt
+CUP_265
+CUP_352
+GA_007
+GA_008
+MCX_082
+PEC_011
+SHN_126
+TEST_010
+
+vcftools --vcf fb_GBS_vcf/fb_pilot_GBS.vcf --weir-fst-pop GBS_samples.txt --out GBS_samples.fst
+#Did not work
+#Try with test vcf
+cp /shared_data/Variants_workshop_2019/premade_gvcf/*.g.vcf* .
+cp -r /shared_data/Variants_workshop_2019/genome . &
+cp -r /shared_data/Variants_workshop_2019/scripts . &
+nohup ./scripts/prepare_genome.sh >& prepare_genome.log &
+nohup ./scripts/combineGVCFs.sh >& combineGVCFs.log &
+nohup ./scripts/genotypeGVCFs.sh >& genotypeGVCFs.log &
+grep -v "##" all.vcf | less -S
+#Get sample list, when -f 10- means from 10th column on (or 9? - either way it works): where the samples start
+grep -m 1 "^#CHROM" all.vcf | cut -f 10- | tr "\t" "\n" > samplelist.txt
+
+vcftools --vcf all.vcf --weir-fst-pop samples1.txt --weir-fst-pop samples2.txt
+#Err: How alternate alleles are phased with reference to eachother
+#Try something else
+vcftools --vcf all.vcf --freq
+#Actually! The output is produced even with all the errors for both
+#But maybe it only output FST for when I compared two populations
+
+grep -m 1 "^#CHROM" fb_pilot_GBS.vcf| cut -f 10- | tr "\t" "\n" > samplelist.txt
+vcftools --vcf fb_pilot_GBS.vcf --weir-fst-pop samplelist.txt
+#Who are these individuals?
+#TEST_010		Sim
+#CUP_265		Sol
+#PEC_011		Sim
+#MCX_082		Sol
+#GA_007			Sim
+#SHN_126		Sol
+#CUP_352		Sol
+#GA_008			Sim
+
+vcftools --vcf fb_pilot_GBS.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt 
+Weir and Cockerham mean Fst estimate: 0.075007
+Weir and Cockerham weighted Fst estimate: 0.1392
