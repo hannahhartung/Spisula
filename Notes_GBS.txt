@@ -154,9 +154,14 @@ vcftools --vcf fb_pilot_GBS.vcf --weir-fst-pop samplelist.txt
 #CUP_352		Sol
 #GA_008			Sim
 
-vcftools --vcf fb_pilot_GBS.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt 
+vcftools --vcf fb_pilot_GBS.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt --out fb_take_two
 Weir and Cockerham mean Fst estimate: 0.075007
 Weir and Cockerham weighted Fst estimate: 0.1392
+
+#redo
+Weir and Cockerham mean Fst estimate: 0.075007
+Weir and Cockerham weighted Fst estimate: 0.1392
+After filtering, kept 264850 out of a possible 264850 Sites
 
 #Date: August 1 2020 
 #WARNINGS from VCFTOOLS - when trying to use all individuals as one pop
@@ -185,6 +190,21 @@ Require at least two populations to estimate Fst. Skipping
 After filtering, kept 0 out of a possible 0 Sites
 File does not contain any sites
 
+#August 3rd
+#Filter by no missing data
+#How many was it originally based on?
+82891
+#
+-g, --genotype [^][hom|het|miss]
+bcftools view -o fb_no_missing_GBS.vcf --genotype ^miss fb_pilot_GBS.vcf 
+include only sites with one or more homozygous (hom), heterozygous (het) or missing (miss) genotypes. When prefixed with ^, the logic is reversed; thus ^het excludes sites with heterozygous genotypes.
 
+#This would leave me to believe that the --weir-fst-pop already filtered by nonmissing
+82891
+#
+vcftools --vcf fb_no_missing_GBS.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt --out fb_no_missing
+Weir and Cockerham mean Fst estimate: 0.075007
+Weir and Cockerham weighted Fst estimate: 0.1392
+After filtering, kept 82890 out of a possible 82890 Sites
 
 
