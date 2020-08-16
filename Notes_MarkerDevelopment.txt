@@ -192,7 +192,581 @@ $14 ~ "0/0"\
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 ########################################### NOTES ####################################
+#Date: August 9 2020
+#PRIMER3 and CALLING RFLP
+#It sounds like I may need to identify the primer areas first and then check for rflp
+
+#Required to install
+git clone https://github.com/primer3-org/primer3.git primer3
+cd primer3/src
+make
+make test
+#Takes about 20 minutes
+
+#Now, do I need to blast my transcriptome?
+#Try blasting with PrimerBlast with default settings except minimum bp is 200
+#PrimerBLAST doesn't like looking at files with multiple contigs
+
+#Pull the biggest ones
+grep ">T" Sol_ref.fa | less -S
+#Used excel to find the longest ones
+#Check fa at that contig and then vcf
+samtools faidx Sol_ref.fa TRINITY_DN1893_c0_g1_i3
+vcftools --vcf output_total_filter.vcf --chr TRINITY_DN1893_c0_g1_i3 --out filter_TRINITY_DN1893_c0_g1_i3.vcf
+
+bgzip < output_total_filter.vcf > o_total_filter.vcf.gz &
+tabix o_total_filter.vcf.gz
+bcftools view o_total_filter.vcf.gz -r TRINITY_DN1893_c0_g1_i3 -o filter_TRINITY_DN1893_c0_g1_i3.vcf
+
+grep -v "#" filter_TRINITY_DN1893_c0_g1_i3.vcf | less
+#variable=$(complex_command)
+
+tmp=$(samtools faidx Sol_ref.fa TRINITY_DN1893_c0_g1_i3 | grep -v ">" |tr -d "\n")
+
+#samtools faidx reference.fasta lyrata:1-108
+
+
+#Primer3 Set-up
+#tmpseq=ACCTGTGTGACACACACAAAAATTGTGGGAATTTGGAGATTTAAGGTCCTCTAAGTTCTGAGCTCTTTCGGGAAACCCTTTTGTTTGGCACCACACACACACACAGTGTCAGCGCTATACGTGCATGTGACCTGTGTTCACAGTGTGTACACGTGTGTCACACTGTTTTTTGGGGAAACCCTGTGTACAACACAACACCCACACTGCGCGGCGGCGGTATAAAATTTGCCGCGTTGTGACACACACGTGTGTGTGTCACACAATATAATATCTCTCCGAGAGAGACTCTCTCGGGGGAAAACACCCTTTTGGGTTTTACACAACCCCACACACACTTTTTTGGGGGAAAAACCCCTGTTTGTTTACCCCAAAACCCAAACTTTTGGGTTCTCTCTACACATGGGTTTAACCCAAACCAACACAAACTTTGGGTTTACCCAAACCAAATTTGGGGTTCTCTACACAAACCCTTTTGGGGGGTTTGTACACTTGTGGTACAAATTGGCCAATGTGTACACAAATTGGTTCTCTGAATGTGTGTACTGGATGTGACACATGTGTGATATCGCTGTACGTACATGGTACCATGGTACCATGTGTAAATTGTGTGACACAAAAATTGTGACATGTATACGTCTGTGCAA
+#tmpseq2=$(echo $tmpseq | tr '[A-Z]' '[a-z]')
+#Well now, if I'm only getting ones 200-300 long, I don't need it from the biggest contigs do I?
+
+
+chr=TRINITY_DN1893_c0_g1_i3
+tmpseq=$(samtools faidx Sol_ref.fa $chr | grep -v ">" |tr -d "\n" | tr '[A-Z]' '[a-z]')
+echo \
+"SEQUENCE_ID=$chr
+SEQUENCE_TEMPLATE=$tmpseq
+PRIMER_TASK=generic
+PRIMER_PICK_LEFT_PRIMER=1
+PRIMER_PICK_INTERNAL_OLIGO=0
+PRIMER_PICK_RIGHT_PRIMER=1
+PRIMER_OPT_SIZE=20
+PRIMER_MIN_SIZE=18
+PRIMER_MAX_SIZE=22
+PRIMER_PRODUCT_SIZE_RANGE=200-300
+PRIMER_EXPLAIN_FLAG=1
+PRIMER_NUM_RETURN=30
+PRIMER_MIN_GC=45
+PRIMER_MAX_GC=60
+PRIMER_MAX_TM=62
+PRIMER_MAX_SELF_ANY=0.0
+PRIMER_MAX_SELF_END=0.0
+PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT=1
+PRIMER_MAX_HAIRPIN_TH=30.0
+PRIMER_WT_HAIRPIN_TH=1
+=" > primer_$chr.input
+./primer3/src/primer3_core primer_$chr.input > primer3_$chr.output
+
+PRIMER_LEFT_0=19634,20
+PRIMER_RIGHT_0=19841,20
+
+for NUM in 0 1 2 3 4 5 6 7 8 9
+do
+	pleft=$(grep "PRIMER_LEFT_$NUM=" primer2_$chr.output | sed 's/^.\{14\}//' | sed 's/.\{3\}$//')
+	pright=$(grep "PRIMER_RIGHT_$NUM=" primer2_$chr.output | sed 's/^.\{15\}//' | sed 's/.\{3\}$//')
+	bcftools view o_total_filter.vcf.gz -r TRINITY_DN1893_c0_g1_i3:$pleft-$pright -o filter_TRINITY_DN1893_c0_g1_i3.vcf
+	usable=$(grep -v "#" filter_TRINITY_DN1893_c0_g1_i3.vcf | wc -l)
+	if [ $usable -ge 1 ]; then
+		echo -e "$chr\t$NUM\t$pleft\t$pright\t$usable" >> list_of_sites.txt
+	fi
+done
+
+#Where I will create a table:
+echo -e "#CONTIG_TRINITY_ID\tPRIMER3PAIR\tLEFTSTART\tRIGHTSTART\tN_SNPS" > list_of_sites.txt
+
+
+
+#For loop for the top 20 longest contigs
+CONTIGS=(
+TRINITY_DN1893_c0_g1_i3
+TRINITY_DN3859_c0_g1_i4
+TRINITY_DN5165_c1_g1_i9
+TRINITY_DN1004_c0_g1_i5
+TRINITY_DN698_c0_g1_i17
+TRINITY_DN893_c0_g1_i16
+TRINITY_DN2875_c0_g1_i5
+TRINITY_DN1160_c0_g1_i4
+TRINITY_DN2545_c0_g1_i1
+TRINITY_DN1095_c0_g1_i12
+TRINITY_DN482_c1_g1_i1
+TRINITY_DN2744_c0_g1_i4
+TRINITY_DN1699_c0_g1_i5
+TRINITY_DN370_c0_g1_i6
+TRINITY_DN297_c4_g1_i3
+TRINITY_DN347_c0_g1_i6
+TRINITY_DN754_c0_g3_i1
+TRINITY_DN4627_c0_g1_i4
+TRINITY_DN579_c0_g1_i5
+TRINITY_DN1267_c0_g2_i10
+)
+
+for chr in ${CONTIGS[@]}
+do 
+echo "$chr"
+tmpseq=$(samtools faidx Sol_ref.fa $chr | grep -v ">" |tr -d "\n" | tr '[A-Z]' '[a-z]')
+echo \
+"SEQUENCE_ID=$chr
+SEQUENCE_TEMPLATE=$tmpseq
+PRIMER_TASK=generic
+PRIMER_PICK_LEFT_PRIMER=1
+PRIMER_PICK_INTERNAL_OLIGO=0
+PRIMER_PICK_RIGHT_PRIMER=1
+PRIMER_OPT_SIZE=20
+PRIMER_MIN_SIZE=18
+PRIMER_MAX_SIZE=22
+PRIMER_PRODUCT_SIZE_RANGE=200-300
+PRIMER_EXPLAIN_FLAG=1
+PRIMER_NUM_RETURN=10
+PRIMER_MIN_GC=45
+PRIMER_MAX_GC=60
+PRIMER_MAX_TM=62
+PRIMER_MAX_SELF_ANY=0.0
+PRIMER_MAX_SELF_END=0.0
+PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT=1
+PRIMER_MAX_HAIRPIN_TH=30.0
+PRIMER_WT_HAIRPIN_TH=1
+=" > primer_attempts/primer_$chr.input
+./primer3/src/primer3_core primer_attempts/primer_$chr.input > primer_attempts/primer_$chr.output
+for NUM in 0 1 2 3 4 5 6 7 8 9
+do
+	pleft=$(grep "PRIMER_LEFT_$NUM=" primer_attempts/primer_$chr.output | sed 's/^.\{14\}//' | sed 's/.\{3\}$//')
+	pright=$(grep "PRIMER_RIGHT_$NUM=" primer_attempts/primer_$chr.output | sed 's/^.\{15\}//' | sed 's/.\{3\}$//')
+	bcftools view o_total_filter.vcf.gz -r $chr:$pleft-$pright -o primer_attempts/f_$chr.$NUM.vcf
+	usable=$(grep -v "#" primer_attempts/f_$chr.$NUM.vcf | wc -l)
+	if [ $usable -ge 1 ]; then
+		echo -e "$chr\t$NUM\t$pleft\t$pright\t$usable" >> list_of_sites.txt
+		echo "found $usable SNPS"
+		#SAVE THE FASTA FILE OF THAT PRIMER PRODUCT
+		samtools faidx Sol_ref.fa $chr:$pleft-$pright -o products/p_sol_$chr.$NUM.fasta
+		#Grab the fasta of any one similis from because they should all have the same snp at these sites (but what about added snps that it might pick up on)
+		#So maybe instead I could use the reference with the vcf (keep only the similis in the vcf)
+		bgzip -c primer_attempts/f_$chr.$NUM.vcf > primer_attempts/f_$chr.$NUM.vcf.gz
+		tabix primer_attempts/f_$chr.$NUM.vcf.gz
+		bcftools view primer_attempts/f_$chr.$NUM.vcf.gz -s Sim4 -O z > primer_attempts/f_sim_$chr.$NUM.vcf.gz
+		tabix primer_attempts/f_sim_$chr.$NUM.vcf.gz
+		cat ref_$chr.fa | vcf-consensus primer_attempts/f_sim_$chr.$NUM.vcf.gz > products/sim_$chr.$NUM.fasta
+	fi
+done
+done
+
+
+#Each contig takes about 10 seconds
+
+#vcftools
+#first you have to bgzip and tabix
+bgzip -c primer_attempts/f_TRINITY_DN1004_c0_g1_i5.2.vcf > primer_attempts/f_TRINITY_DN1004_c0_g1_i5.2.vcf.gz
+tabix primer_attempts/f_TRINITY_DN1004_c0_g1_i5.2.vcf.gz
+bcftools view primer_attempts/f_TRINITY_DN1004_c0_g1_i5.2.vcf.gz -s Sim4 | grep -v "##" | less
+
+chr=TRINITY_DN1004_c0_g1_i5
+NUM=3
+pleft=10086
+pright=10341
+
+samtools faidx products/sim_$chr.$NUM.fasta -r $chr:$pleft-$pright
+samtools faidx products/sim_$chr.$NUM.fasta
+
+samtools faidx sim_$chr.$NUM.fasta
+
+samtools faidx Sol_ref.fa $chr > ref_$chr.fa
+
+
+cat Sol_ref.fa | vcf-consensus primer_attempts/f_TRINITY_DN1004_c0_g1_i5.2.vcf.gz  > products/sim_TRINITY_DN1004_c0_g1_i5.2.fasta 
+
+
+#Primer3
+#SNP2CAPS Perl Script
+modified FASTA formatted file that may contain data of more than one multiple alignment.
+Structure of the header line:
+">id_seqname" (with "id" = name of the multiple alignment and "seqname" = sequence name, see example)
+#example
+>GBS0734_Barke
+TTCTTCCCAAGATACTTGGAGACCCTCGACTACTACACGGCAATGTTTGAGTCAATAGACGTTGCTCTCCCGAGGGATGATAAGAGGCGGATTAGCACGGAGCAGCACTGTGTTGCAAGGGATATTGTCAACTTAATCGCGTGTGAGGGTGCGGAAAGGGTGGAGAGGCATGAGGTGTTTGGGAAATGGAAGGCAAGGTTTGCAATGGCTGGATTTAGGCCGTACCCGCTGAGCTCAGTGGTGAACAACACCATCAAAACACTACTGAATAGCTACCACAGTTGCTACAGGCTTGAGGAGAGGGACGGGGTCCTTTTCC
+>GBS0734_Dom
+TTCTTCCCAAGATACTTGGAGACCCTCGACTACTACACGGCAATGTTTGAGTCAATAGACGTTGCTCTCCCGAGGGATGATAAGAGGCGGATTAGCACGGAGCAGCACTGTGTTGCAAGGGATATTGTCAACTTAATCGCGTGTGAGGGTGCGGAAAGGGTGGAGAGGCATGAGGTGTTTGGGAAATGGAAGGCAAGGTTTGCAATGGCTGGATTTAGGCCGTACCCGCTGAGCTCAGTGGTGAACAACACCATCAAAACACTACTGAATAGCTACCACAGTTGCTACAGGCTTGAGGAGAGGGACGGGGTCCTTTTCC
+>GBS0734_Igri
+TTCTTCCCAAGATACTTGGAGACCCTCGACTACTACACGGCAATGTTTGAGTCAATAGACGTTGCTCTCCCGAGGGATGATAAGAGGCGGATTAGCACGGAGCAGCACTGTGTTGCAAGGGATATCGTCAACTTAATTGCGTGCGAGGGTGCGGAAAGGGTAGAGAGGCATGAGGTGTTTGGGAAATGGAAGACAAGGTTTGCAATGGCTGGATTTAGGCCGTACCCGCTGAGTTCAGTGGTGAACAACACCATCAAAACACTGCTGAATAGCTACCACAGTTGCTACAGGCTTGAGGAGAGGGACGGAGTCCTTTTCC
+>GBS0734_Franka
+TTCTTCCCAAGATACTTGGAGACCCTCGACTACTACACGGCAATGTTTGAGTCAATAGACGTTGCTCTCCCGAGGGATGATAAGAGGCGGATTAGCACGGAGCAGCACTGTGTTGCAAGGGATATCGTCAACTTAATCGCGTGTGAGGGTGCGGAAAGGGTGGAGAGGCATGAGGTGTTTGGGAAATGGAAGGCAAGGTTTGCAATGGCTGGATTTAGGCCGTACCCGCTGAGCTCAGTGGTGAACAACACCATCAAAACACTACTGAATAGCTACCACAGTTGCTACAGGCTTGAGGAGAGGGACGGGGTCCTTTTCC
+#Try with example
+#Remember to make executable
+chmod a+x SNP2CAPS.pl 
+
+SNP2CAPS.pl example_SNPS2CAPS.fasta rebase.gcg
+#Requires Tk.pm
+#wget
+wget https://www.cpan.org/modules/by-module/Tk/Tk-804.035.readme
+#This may require BioHPC crew help
+
+
+
+#FROM
+pleft=$(grep "PRIMER_LEFT_$NUM=" primer2_$chr.output | sed 's/^.\{14\}//' | sed 's/.\{3\}$//')
+#TO
+pright=$(grep "PRIMER_RIGHT_$NUM=" primer2_$chr.output | sed 's/^.\{15\}//' | sed 's/.\{3\}$//')
+
+pleft=100
+pright=5000
+bcftools view o_total_filter.vcf.gz -r TRINITY_DN1893_c0_g1_i3:$pleft-$pright -o filter_TRINITY_DN1893_c0_g1_i3.vcf
+grep -v "#" filter_TRINITY_DN1893_c0_g1_i3.vcf | wc -l
+#If this wc value is non zero then there is a SNP in the primer region
+
+
+#Took about 1.5 sec with the extra parameters, before it was instantaneous
+PRIMER_NUM_RETURN=10
+PRIMER_MIN_GC=45
+PRIMER_MAX_GC=60
+PRIMER_MAX_TM=62
+PRIMER_MAX_SELF_ANY=0.0
+PRIMER_MAX_SELF_END=0.0
+PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT=1
+PRIMER_MAX_HAIRPIN_TH=30.0
+PRIMER_WT_HAIRPIN_TH=1
+
+
+#Produces these
+PRIMER_PAIR_9_PENALTY=0.071899
+PRIMER_LEFT_9_PENALTY=0.037326
+PRIMER_RIGHT_9_PENALTY=0.034574
+PRIMER_LEFT_9_SEQUENCE=gcagtcaactggtcgatgga
+PRIMER_RIGHT_9_SEQUENCE=tggtgggcgataatgttgct
+PRIMER_LEFT_9=9042,20
+PRIMER_RIGHT_9=9321,20
+PRIMER_LEFT_9_TM=60.037
+PRIMER_RIGHT_9_TM=60.035
+PRIMER_LEFT_9_GC_PERCENT=55.000
+PRIMER_RIGHT_9_GC_PERCENT=50.000
+PRIMER_LEFT_9_SELF_ANY_TH=11.87
+PRIMER_RIGHT_9_SELF_ANY_TH=0.00
+PRIMER_LEFT_9_SELF_END_TH=0.00
+PRIMER_RIGHT_9_SELF_END_TH=0.00
+PRIMER_LEFT_9_HAIRPIN_TH=43.94
+PRIMER_RIGHT_9_HAIRPIN_TH=37.39
+PRIMER_LEFT_9_END_STABILITY=3.4100
+PRIMER_RIGHT_9_END_STABILITY=3.9100
+PRIMER_PAIR_9_COMPL_ANY_TH=2.64
+PRIMER_PAIR_9_COMPL_END_TH=1.48
+PRIMER_PAIR_9_PRODUCT_SIZE=280
+
+#options
+#  PRIMER_PRODUCT_SIZE_RANGE=100-300
+  PRIMER_SECONDARY_STRUCTURE_ALIGNMENT=0 #Print them out, not needed, 
+  PRIMER_NUM_RETURN=5
+  PRIMER_MAX_HAIRPIN_TH=47.0
+  PRIMER_INTERNAL_MAX_HAIRPIN_TH=47.0
+  PRIMER_MAX_END_STABILITY=100.0
+  PRIMER_MIN_LEFT_THREE_PRIME_DISTANCE=-1
+  PRIMER_MIN_RIGHT_THREE_PRIME_DISTANCE=-1
+  PRIMER_EXPLAIN_FLAG=0
+  PRIMER_LIBERAL_BASE=0
+  PRIMER_FIRST_BASE_INDEX=0
+  PRIMER_MAX_TEMPLATE_MISPRIMING=-1.00
+  PRIMER_MAX_TEMPLATE_MISPRIMING_TH=-1.00
+  PRIMER_PAIR_MAX_TEMPLATE_MISPRIMING=-1.00
+  PRIMER_PAIR_MAX_TEMPLATE_MISPRIMING_TH=-1.00 #Negative values mean dont check
+
+PRIMER_OPT_GC_PERCENT (float; default 50.0)
+Optimum GC percent. This parameter influences primer selection only if PRIMER_WT_GC_PERCENT_GT or PRIMER_WT_GC_PERCENT_LT are non-0.
+#From lab of primer development: what where the best parameters
+#17-28 in length : stick to defaults 18-22
+#40-60 GC : change max from 80 to 60 or even less (very narrow range)
+#TM between 52 and 62 : defaults are probably fine - DEFAULT OPT is 60, Min is 57, I set max to 62
+#primer dimers and self-complementation and secondary structures : try to be as stringent as possible
+		#could decrease 
+		#PRIMER_MAX_SELF_ANY (decimal, 9999.99; default 8.00) where 0.0 is none but I don't understand if the negative values are acceptible
+		#PRIMER_MAX_SELF_ANY_TH (decimal, 9999,99; default 47.00) does it by temp where unstable structure are still allowed cause they would melt so easily
+		#PRIMER_PAIR_MAX_COMPL_ANY describes the tendency of the left primer to bind to the right primer. It is the maximum allowable local alignment score when testing for complementarity between left and right primers. It is similar to PRIMER_MAX_SELF_ANY.  (decimal, 9999.99; default 8.00)
+		#PRIMER_WT_SELF_ANY (float; default 0.0) for _TH too
+		#PRIMER_MAX_SELF_END (decimal, 9999.99; default 3.00) where a score of 0 means none
+		#PRIMER_PAIR_MAX_COMPL_END tries to bind the 3'-END of the left primer to the right primer and scores the best binding it can find. It is similar to PRIMER_MAX_SELF_END.
+		#PRIMER_WT_SELF_END (float; default 0.0) set to 1?
+		#PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT=1 (CHECKS FOR HAIRPINS)
+		#PRIMER_MAX_HAIRPIN_TH (float; default 47.0) by deafault should be 10 degrees less than 
+		#PRIMER_WT_HAIRPIN_TH (float; default 0.0)
+		#PRIMER_MAX_END_STABILITY (float, 999.9999; default 100.0) The maximum stability for the last five 3' bases of a left or right primer. Bigger numbers mean more stable 3' ends. 
+		
+		
+
+#Use this same thing with internals to do the non RFLP one
+
+
+#loop over
+while read REGION; do
+echo $REGION
+done < chr_list.txt
+
+
+
+
+
+SAMPLES=(
+    Sim4
+    Sim5
+    Sim6
+    Sol10
+    Sol8
+    Sol7
+    Sol6
+)
+SAMPLES=(
+    CUP_265
+    CUP_352
+    GA_007
+    GA_008
+    MCX_082
+    PEC_011
+    SHN_126
+    TEST_010
+)
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "$SAMPLE" > $SAMPLE.txt
+done
+vcftools --vcf fb_original.vcf --weir-fst-pop Sim4.txt --weir-fst-pop Sim5.txt --weir-fst-pop Sim6.txt --weir-fst-pop Sol6.txt --weir-fst-pop Sol8.txt --weir-fst-pop Sol7.txt --weir-fst-pop Sol10.txt --out dpq_ind_pilot
+Weir and Cockerham mean Fst estimate: -nan
+Weir and Cockerham weighted Fst estimate: -nan
+#DOES NOT WORK ONE BY ONE
+
+#Date: August 6 2020
+#Rerunning the original and pilot data to confirm fst values
+#Initialize
+#Could redo by doing freebayes chromosome by chromosome for pilot data too
+
+#FreeBayes
+screen
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+FB=/programs/freebayes-v1.3.1/freebayes
+$FB -f Sol_ref.fa CUP_265.sorted.dedup.bam CUP_352.sorted.dedup.bam MCX_082.sorted.dedup.bam PEC_011.sorted.dedup.bam GA_007.sorted.dedup.bam GA_008.sorted.dedup.bam SHN_126.sorted.dedup.bam TEST_010.sorted.dedup.bam --min-mapping-quality 30 > fb_pilot_2_GBS.vcf >& fb_2_GBS.log &
+
+2934592	output_DN_lesshead.vcf 
+2815705	grepped
+
+383738	fb_pilot_GBS.vcf
+264851	grepped
+
+
+
+#Filling out table
+bcftools filter --thread 8 --include 'COUNT(GT="mis")=0' fb_original.vcf > no_miss_original.vcf &
+bcftools filter --thread 8 --include 'COUNT(GT="mis")=0' fb_pilot.vcf > no_miss_pilot.vcf &
+
+# f2 Remove missing data, site depth >200 and <2001 and QUAL
+bcftools filter --include 'INFO/DP>200 && INFO/DP<2000' no_miss_original.vcf | bcftools filter --include 'QUAL>100' > f2_original.vcf &
+bcftools filter --include 'INFO/DP>200 && INFO/DP<2000' no_miss_pilot.vcf | bcftools filter --include 'QUAL>100' > f2_pilot.vcf &
+vcftools --vcf f2_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out f2_pilot
+Weir and Cockerham mean Fst estimate: 0.064626
+Weir and Cockerham weighted Fst estimate: 0.06938
+After filtering, kept 852 out of a possible 852 Sites
+vcftools --vcf f2_original.vcf --weir-fst-pop Sim_original --weir-fst-pop Sol_original --out f2_original
+Weir and Cockerham mean Fst estimate: 0.23902
+Weir and Cockerham weighted Fst estimate: 0.40385
+After filtering, kept 649867 out of a possible 649867 Sites
+
+
+#f3 Remove missing data, site depth >200 and <2001
+bcftools filter --include 'INFO/DP>200 && INFO/DP<2000' no_miss_original.vcf > f3_original.vcf &
+vcftools --vcf f3_original.vcf --weir-fst-pop Sim_original --weir-fst-pop Sol_original --out f3_original
+Weir and Cockerham mean Fst estimate: 0.20888
+Weir and Cockerham weighted Fst estimate: 0.37865
+After filtering, kept 856228 out of a possible 856228 Sites
+
+#f4 Remove missing data, site depth >80 and <2001 (8 samples x 10 average depth)
+bcftools filter --include 'INFO/DP>80 && INFO/DP<2000' no_miss_original.vcf > f4_original.vcf &
+bcftools filter --include 'INFO/DP>80 && INFO/DP<2000' no_miss_pilot.vcf > f4_pilot.vcf &
+vcftools --vcf f4_original.vcf --weir-fst-pop Sim_original --weir-fst-pop Sol_original --out f4_original
+Weir and Cockerham mean Fst estimate: 0.20263
+Weir and Cockerham weighted Fst estimate: 0.36853
+After filtering, kept 1440047 out of a possible 1440047 Sites
+
+vcftools --vcf f4_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out f4_pilot
+Weir and Cockerham mean Fst estimate: 0.041762
+Weir and Cockerham weighted Fst estimate: 0.06444
+After filtering, kept 29160 out of a possible 29160 Sites
+
+
+#f5 Remove missing data, site depth >80 and <2001, QUAL>100
+bcftools filter --include 'INFO/DP>80 && INFO/DP<2000' no_miss_original.vcf | bcftools filter --include 'QUAL>100' > f5_original.vcf &
+bcftools filter --include 'INFO/DP>80 && INFO/DP<2000' no_miss_pilot.vcf | bcftools filter --include 'QUAL>100' > f5_pilot.vcf &
+
+vcftools --vcf f5_original.vcf --weir-fst-pop Sim_original --weir-fst-pop Sol_original --out f5_original
+Weir and Cockerham mean Fst estimate: 0.24599
+Weir and Cockerham weighted Fst estimate: 0.40495
+After filtering, kept 1025231 out of a possible 1025231 Sites
+vcftools --vcf f5_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out f5_pilot
+Weir and Cockerham mean Fst estimate: 0.071536
+Weir and Cockerham weighted Fst estimate: 0.07682
+After filtering, kept 6751 out of a possible 6751 Sites
+
+
+#f6 Remove missing data, site depth >80 and <2001, QUAL>10 (pilot data has much lower quality)
+bcftools filter --include 'INFO/DP>80 && INFO/DP<2000' no_miss_original.vcf | bcftools filter --include 'QUAL>10' > f6_original.vcf &
+bcftools filter --include 'INFO/DP>80 && INFO/DP<2000' no_miss_pilot.vcf | bcftools filter --include 'QUAL>10' > f6_pilot.vcf &
+
+vcftools --vcf f6_original.vcf --weir-fst-pop Sim_original --weir-fst-pop Sol_original --out f6_original
+Weir and Cockerham mean Fst estimate: 0.22849
+Weir and Cockerham weighted Fst estimate: 0.39053
+After filtering, kept 1137437 out of a possible 1137437 Sites
+vcftools --vcf f6_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out f6_pilot
+Weir and Cockerham mean Fst estimate: 0.066706
+Weir and Cockerham weighted Fst estimate: 0.079817
+After filtering, kept 11788 out of a possible 11788 Sites
+
+
+#Filter
+bcftools filter --include 'INFO/DP>200 && INFO/DP<2000' fb_original.vcf | bcftools filter --include 'QUAL>100' > dpq_original.vcf &
+681303
+bcftools filter --include 'INFO/DP>200 && INFO/DP<2000' fb_pilot.vcf | bcftools filter --include 'QUAL>100' > dpq_pilot.vcf &
+853 	#<- welp thats no good
+
+bcftools filter --include 'INFO/DP>200 && INFO/DP<2000' no_miss_pilot.vcf > f2_pilot.vcf &
+vcftools --vcf f2_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out f2_pilot
+Weir and Cockerham mean Fst estimate: 0.040302
+Weir and Cockerham weighted Fst estimate: 0.063555
+
+
+#Try by individual 
+bcftools filter --include 'MIN(FORMAT/DP)>10' fb_pilot.vcf > idp_pilot.vcf &
+9755
+#Remove missing by "mis" then by "."
+bcftools filter --thread 8 --include 'COUNT(GT="mis")=0' fb_pilot.vcf > no_miss_pilot.vcf &
+82891
+bcftools filter --thread 8 --include 'COUNT(GT=".")=0' fb_pilot.vcf > no_missdot_pilot.vcf &
+82891 #<- good suppose they should match
+vcftools --vcf no_miss_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out no_f_pilot
+Weir and Cockerham mean Fst estimate: 0.075007
+Weir and Cockerham weighted Fst estimate: 0.1392
+
+
+#Try estimating FST for really small files
+vcftools --vcf dpq_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out dpq_pilot
+Weir and Cockerham mean Fst estimate: 0.064626
+Weir and Cockerham weighted Fst estimate: 0.06938
+vcftools --vcf idp_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out idp_pilot
+Weir and Cockerham mean Fst estimate: 0.037945
+Weir and Cockerham weighted Fst estimate: 0.05949
+
+
+
+#Try without filtering at all
+vcftools --vcf fb_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out no_f_pilot
+Weir and Cockerham mean Fst estimate: 0.075007
+Weir and Cockerham weighted Fst estimate: 0.1392
+
+vcftools --vcf fb_original.vcf --weir-fst-pop Sim_original --weir-fst-pop Sol_original --out no_f_original
+Weir and Cockerham mean Fst estimate: 0.20791
+Weir and Cockerham weighted Fst estimate: 0.37488
+
+
+#Just try to get general stats
+bcftools stats --depth 1,2000,1 --samples-file pilotlist fb_pilot.vcf  > pilot.stats.vchk 2> pilot.stats.vchk.err
+#It's the depth that's super low, basicallly it has no snps over depth 160, sites max out around 400, with most <200
+#80 = 10*8 reads depth
+bcftools filter --include 'INFO/DP>80 && INFO/DP<2000' fb_pilot.vcf > less_dpq_pilot.vcf &
+6884 #<- still too little with QUAL>99
+#Try without quality
+29517
+#Try with quality >10 - this might be removing sites without all non missing
+bcftools filter --include 'INFO/DP>80 && INFO/DP<2000' fb_pilot.vcf | bcftools filter --include 'QUAL>10' > less_dp_minq_pilot.vcf &
+11971
+#And try with nonmissing and depth
+bcftools filter --include 'INFO/DP>80 && INFO/DP<2000' no_missdot_pilot.vcf | bcftools filter --include 'QUAL>10' > no_miss_dpq_pilot.vcf &
+29161 #(without quality)
+11789 #(with quality) -> TRY FST OF THIS
+vcftools --vcf no_miss_dpq_pilot.vcf --weir-fst-pop Sim_pilot --weir-fst-pop Sol_pilot --out min_f_pilot
+Weir and Cockerham mean Fst estimate: 0.066706
+Weir and Cockerham weighted Fst estimate: 0.079817
+After filtering, kept 11788 out of a possible 11788 Sites
+#Repeat with original
+bcftools filter --thread 8 --include 'COUNT(GT="mis")=0' fb_original.vcf | bcftools filter --thread 8 --include 'INFO/DP>80 && INFO/DP<2000' | bcftools filter --include 'QUAL>10' > no_miss_dpq_original.vcf &
+vcftools --vcf no_miss_dpq_original.vcf --weir-fst-pop Sim_original --weir-fst-pop Sol_original --out min_f_original
+Weir and Cockerham mean Fst estimate: 0.22849
+Weir and Cockerham weighted Fst estimate: 0.39053
+After filtering, kept 1137437 out of a possible 1137437 Sites
+
+
+
+
+#bcftools filter options
+-S, --set-GTs .|0
+set genotypes of failed samples to missing value (.) or reference allele (0)
+--threads INT
+-i or -e 'expression'
+GT="."
+GT[@samples.txt]="het"
+GT="mis"
+COUNT(GT="hom")=0 #no homozygous genotypes at the site
+
+
+bcftools filter --include 'MIN(FORMAT/DP)>10' fb_original.vcf  | grep -v "##" | wc -l
+bcftools filter --include 'MIN(FORMAT/DP)>10' fb_pilot.vcf > idp_pilot.vcf &
+
+
+bcftools stats --depth 1,2000,1 --samples-file samplelist.txt o_filter_Sim1_Sol0.vcf.gz  > o_filter_Sim1_Sol0.vcf.vchk 2> output_Sim1Sol0.stats.vchk.err
+
+bcftools filter --include 'MIN(FORMAT/DP)>10' o_tab_S1S0.vcf | grep -v "##" | wc -l
+27k <- individual
+bcftools filter --include 'MIN(INFO/DP)>10' o_tab_S1S0.vcf | grep -v "##" | wc -l
+85k <- group 
+bcftools filter --include 'INFO/DP>200' o_tab_S1S0.vcf | grep -v "##" | wc -l
+39253
+bcftools filter --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.vcf | grep -v "##" | wc -l
+34028
+
+bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.vcf | bcftools filter --include 'TYPE="snp"' | grep -v "##" | wc -l
+bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.vcf | bcftools filter --include 'QUAL>100' | bcftools filter --include 'TYPE="snp"' | grep -v "##" | wc -l
+27580
+#NOTE PUTTING A CAP ON THE QUALITY REMOVES A LOT
+
+
+#CHART
+#TOTAL
+2,815,704
+#NO MISSING AND NO PHASED
+307,735
+#DIANOGSTIC
+85,954
+#DEPTH (200-1500)
+34,028
+#DISTANCE FROM INDELS 
+33,468
+#SNPs only
+27,830
+
+
+awk '{if($6 > 100 && ) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | wc -l
+
+
+bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.vcf | bcftools filter --include 'QUAL>100' | bcftools filter --include 'TYPE="snp"' > output_total_filter.vcf
+vcftools --vcf output_total_filter.vcf --weir-fst-pop samplesSim1.txt --weir-fst-pop samplesSol1.txt --out fb_total_filter
+Weir and Cockerham mean Fst estimate: 1
+Weir and Cockerham weighted Fst estimate: 1
+After filtering, kept 27579 out of a possible 27579 Sites
+
+#Original fst estimate, just with no missing data (and no phased)
+vcftools --vcf filter_no_missing.vcf --weir-fst-pop samplesSim1.txt --weir-fst-pop samplesSol1.txt --out fb_total_filter
+
+
+
+
+
+
 #STARTING OVER AGAIN - JUNE 2020 and JULY
 #RawReads directory in Spisula folder
 
@@ -1082,10 +1656,95 @@ bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.v
 #NOTE PUTTING A CAP ON THE QUALITY REMOVES A LOT
 
 
+#FILTERING FOR FST
+#Date: August 16 2020
+#WHICH ONE SHOULD I REMOVE?
+
+Sim4
+Sim5
+Sim6
+Sol6
+Sol7
+Sol8
+Sol10
+  
+SAMPLES=(
+CUP_265
+CUP_352
+GA_007
+GA_008
+MCX_082
+PEC_011
+SHN_126
+TEST_010
+)
+vcftools --vcf pilot_unfiltered.vcf --out pilot.missing.test.vcf --missing-indv &
+vcftools --vcf original_unfiltered.vcf --out original.missing.test.vcf --missing-indv &
+
+Sol10   2815704 0       231832  0.0823354
+Sim5    2815704 0       287434  0.102082
+Sol7    2815704 0       239953  0.0852195
+Sim4    2815704 0       180516  0.0641104
+Sim6    2815704 0       476204  0.169124
+Sol6    2815704 0       120372  0.0427502
+Sol8    2815704 0       231284  0.0821407
+
+INDV    N_DATA  N_GENOTYPES_FILTERED    N_MISS  F_MISS
+TEST    264850  0       82112   0.310032
+CUP_265 264850  0       85360   0.322296
+PEC_011 264850  0       104600  0.394941     #This one has slightly more but they are all about the same
+MCX_082 264850  0       82110   0.310025
+GA_007  264850  0       79441   0.299947
+SHN_126 264850  0       84276   0.318203
+CUP_352 264850  0       88483   0.334087
+GA_008  264850  0       83516   0.315333
+
+--missing-indv
+#Generates a file reporting the missingness on a per-individual basis. The file has the suffix ".imiss".
+--missing site
+vcftools --vcf original_unfiltered.vcf --out original.missing.site.vcf --missing-site &
+vcftools --vcf pilot_unfiltered.vcf --out pilot.missing.site.vcf --missing-site &
+
+#Stats 
+bcftools stats --depth 1,2000,1 --samples-file pilotlist pilot_unfiltered.vcf  > pilot.stats.vchk 2> pilot.stats.vchk.err &
+bcftools stats --depth 1,2000,1 --samples-file originallist original_unfiltered.vcf  > original.stats.vchk 2> original.stats.vchk.err &
+#These are showing up as almost all depth 1! Like 98 %. Where is the original one and what did it say?
+bgzip -c o_filter_Sim1_Sol0.vcf > o_filter_Sim1_Sol0.vcf.gz
+bcftools index o_filter_Sim1_Sol0.vcf.gz
+bcftools stats --depth 1,2000,1 --samples-file originallist o_filter_Sim1_Sol0.vcf.gz  > o_filter_Sim1_Sol0.vcf.vchk 2> output_Sim1Sol0.stats.vchk.err
+#I might have been looking at the genotypes rather than the site
+#The depth for sites are still fairly low - there are a couple thousand greater than 80, a couple hundred >200, the biggest is 948
+grep "DP" pilot.stats.vchk > pilot_DP_stats.txt
+grep "DP" original.stats.vchk > original_DP_stats.txt
+
+grep "QUAL" pilot.stats.vchk > pilot_QUAL_stats.txt
+grep "QUAL" original.stats.vchk > original_QUAL_stats.txt
+
+
+#DENSITY DIAGRAMS?
+#Use the GQ rather than QUAL - confirm they are different
+
+
+
+
+#What is another way to look that the missing individual - Fastq files?
+
+
+
+#Filtering
+bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' pilot_unfiltered.vcf | bcftools filter --include 'QUAL>100' | bcftools filter --include 'TYPE="snp"' | grep -v "##" | wc -l
+
+
+
+
+
+
+
+
 #CHART
 #TOTAL
 2,815,704
-#NO MISSING
+#NO MISSING AND NO PHASED
 307,735
 #DIANOGSTIC
 85,954
@@ -1100,6 +1759,18 @@ bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.v
 awk '{if($6 > 100 && ) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' o_filter_Sim1_Sol0.vcf | wc -l
 
 
+bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.vcf | bcftools filter --include 'QUAL>100' | bcftools filter --include 'TYPE="snp"' > output_total_filter.vcf
+vcftools --vcf output_total_filter.vcf --weir-fst-pop samplesSim1.txt --weir-fst-pop samplesSol1.txt --out fb_total_filter
+Weir and Cockerham mean Fst estimate: 1
+Weir and Cockerham weighted Fst estimate: 1
+After filtering, kept 27579 out of a possible 27579 Sites
+
+#Original fst estimate, just with no missing data (and no phased)
+vcftools --vcf filter_no_missing.vcf --weir-fst-pop samplesSim1.txt --weir-fst-pop samplesSol1.txt --out fb_total_filter
+
+
+
+
 #FIX THE VCFTOOLS NOT LIKING THE HEASDER
 #Quick workaround: index the file with tabix
 #first compress - ERROR: Failed to parse TBX_VCF, was wrong -p [type] used?
@@ -1110,8 +1781,6 @@ grep "#" o_filter_Sim1_Sol0.vcf > o_tab_S1S0.vcf
 grep -v "#" o_filter_Sim1_Sol0.vcf | tr " " "\t" >> o_tab_S1S0.vcf
 
 bgzip -c o_tab_S1S0.vcf > o_tab_S1S0.vcf.gz
-
-
 
 
 samtools flagstat Sim6_iso_ouput.bam

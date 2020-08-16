@@ -208,3 +208,48 @@ Weir and Cockerham weighted Fst estimate: 0.1392
 After filtering, kept 82890 out of a possible 82890 Sites
 
 
+#Date: August 8 2020
+#And realign them
+
+
+#Repeat Free Bayes contig by contig
+while read REGION; do
+  echo "echo $REGION"
+  echo "/programs/freebayes-v1.3.1/freebayes -f $REFFASTA bams/CUP_265.sorted.dedup.bam bams/CUP_352.sorted.dedup.bam bams/GA_007.sorted.dedup.bam bams/GA_008.sorted.dedup.bam bams/MCX_082.sorted.dedup.bam bams/PEC_011.sorted.dedup.bam bams/SHN_126.sorted.dedup.bam bams/TEST_010.sorted.dedup.bam --min-mapping-quality 30 -r $REGION > fb_GBS_vcf/fb_$REGION.vcf"
+done <chr_list.txt > j_fb_GBS_contig.txt
+
+REFFASTA=Sol_ref.fa
+REGION=TRINITY_DN0_c2_g1_i1
+TMP=/workdir/$USER/tmp
+FB=/programs/freebayes-v1.3.1/freebayes
+
+/programs/freebayes-v1.3.1/freebayes -f $REFFASTA bams/CUP_265.sorted.dedup.bam bams/CUP_352.sorted.dedup.bam bams/GA_007.sorted.dedup.bam bams/GA_008.sorted.dedup.bam bams/MCX_082.sorted.dedup.bam bams/PEC_011.sorted.dedup.bam bams/SHN_126.sorted.dedup.bam bams/TEST_010.sorted.dedup.bam --min-mapping-quality 30 -r $REGION > fb_GBS_vcf/fb_$REGION.vcf
+echo $REGION
+$FB -f $REFFASTA bams/Sim4.sd.bam bams/Sim5.sd.bam bams/Sim6.sd.bam bams/Sol6.sd.bam bams/Sol7.sd.bam bams/Sol8.sd.bam bams/Sol10.sd.bam --min-mapping-quality 30 -r $REGION > test_vcf/fb_$REGION.vcf
+
+parallel -j22 < j_fb_GBS_contig.txt
+
+#First do ten of them
+#Don't forget the \ around internal quotes
+for i in {0..9}
+do
+echo "echo $i"
+echo "touch output_DN$i.vcf"
+echo "grep \"#\" fb_GBS_vcf/fb_TRINITY_DN0_c2_g1_i1.vcf | cat >> output_DN$i.vcf"
+echo "grep -v \"#\" fb_GBS_vcf/fb_TRINITY_DN$i*.vcf | cat >> output_DN$i.vcf"
+done > j_combine_fb_vcf.txt
+
+screen
+parallel -j16 < j_combine_fb_vcf.txt
+
+#Checked to make sure they had all finished by doing tail -300+ to make sure there were 9s
+
+#All in one
+touch output_all.vcf
+grep \"#\" output_DN1.vcf | cat >> output_all.vcf
+grep -v \"#\" output_DN*.vcf | cat >> output_all.vcf
+
+
+
+
+
