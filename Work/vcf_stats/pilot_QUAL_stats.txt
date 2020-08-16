@@ -1,5 +1,4 @@
-# QUAL, Stats by quality:
-# QUAL	[2]id	[3]Quality	[4]number of SNPs	[5]number of transitions (1st ALT)	[6]number of transversions (1st ALT)	[7]number of indels
+QUAL	[2]id	[3]Quality	[4]number of SNPs	[5]number of transitions (1st ALT)	[6]number of transversions (1st ALT)	[7]number of indels
 QUAL	0	0	22756	11364	10132	1049
 QUAL	0	1	3603	1760	1672	195
 QUAL	0	2	2515	1317	1084	160

@@ -1,5 +1,4 @@
-# DP, Depth distribution
-# DP	[2]id	[3]bin	[4]number of genotypes	[5]fraction of genotypes (%)	[6]number of sites	[7]fraction of sites (%)
+DP	[2]id	[3]bin	[4]number of genotypes	[5]fraction of genotypes (%)	[6]number of sites	[7]fraction of sites (%)
 DP	0	1	253324	17.728578	0	0.000000
 DP	0	2	233400	16.334220	14036	5.299604
 DP	0	3	152914	10.701504	14202	5.362281

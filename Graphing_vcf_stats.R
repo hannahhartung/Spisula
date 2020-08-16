@@ -2,6 +2,14 @@ library(ggplot2)
 library(tidyverse)
 library(knitr)
 
+o_DP <- read.delim("Work/vcf_stats/original_DP_stats.txt", stringsAsFactors = F, header = TRUE)
+p_DP <- read.delim("Work/vcf_stats/pilot_DP_stats.txt", stringsAsFactors = F, header = TRUE)
+o_Q <- read.delim("Work/vcf_stats/original_QUAL_stats.txt", stringsAsFactors = F, header = TRUE)
+p_Q <- read.delim("Work/vcf_stats/pilot_QUAL_stats.txt", stringsAsFactors = F, header = TRUE)
+o_DP[2001,3] <-2000
+
+
+
 DP <- read.delim("filter_stats_DP.txt", stringsAsFactors = F, header = TRUE)
 DP[2001,3] <-2000
 DP %>%
