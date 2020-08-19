@@ -1720,14 +1720,31 @@ grep "DP" original.stats.vchk > original_DP_stats.txt
 grep "QUAL" pilot.stats.vchk > pilot_QUAL_stats.txt
 grep "QUAL" original.stats.vchk > original_QUAL_stats.txt
 
-
 #DENSITY DIAGRAMS?
 #Use the GQ rather than QUAL - confirm they are different
+TRINITY_DN0_c0_g1_i13   44      .       GTTTG   TTTTT   377998  .       AB=0;ABP=0;AC=14;AF=1;AN=14;AO=20857;CIGAR=1X3M1X;DP=22052;DPB=22037;DPRA=0;EPP=44360.2;EPPR=334.096;GTI=0;LEN=5;MEANALT=33.8571;MQM=33.2603;MQMR=47.307;NS=7;NUMALT=1;ODDS=2269.69;PAIRED=0.0311646;PAIREDR=0.284926;PAO=2;PQA=14;PQR=70;PRO=5;QA=716686;QR=9251;RO=544;RPL=20857;RPP=45293.4;RPPR=648.081;RPR=0;RUN=1;SAF=20749;SAP=44360.2;SAR=108;SRF=429;SRP=396.574;SRR=115;TYPE=complex;technology.ILLUMINA=1    GT:DP:AD:RO:QR:AO:QA:GL 1/1:1408:24,1331:24:373:1331:45958:-3607.92,-374.419,0  1/1:1494:39,1404:39:632:1404:48015:-3761,-377.57,0      1/1:2391:53,2275:53:903:2275:78013:-6097.63,-620.089,0  1/1:4521:137,4227:137:2353:4227:145286:-11283.5,-1102.49,0      1/1:5359:129,5092:129:2231:5092:175211:-13658.9,-1371.45,0      1/1:4078:116,3843:116:2018:3843:131648:-10236.1,-1010.92,0      1/1:2801:46,2685:46:741:2685:92555:-7252.87,-755.459,0
 
-
+#FROM FREEBAYES GITHUB:
+"Of primary interest to most users is the QUAL field, which estimates the probability 
+that there is a polymorphism at the loci described by the record. In freebayes, this value 
+can be understood as 1 - P(locus is homozygous given the data). It is recommended that 
+users use this value to filter their results, rather than accepting anything output by 
+freebayes as ground truth."
+"freebayes estimates observation quality using several simple heuristics based on manipulations of the phred-scaled base qualities:
+For single-base observations, mismatches and reference observations: the un-adjusted base quality provided in the BAM alignment record.
+For insertions: the mean quality of the bases inside of the putatively inserted sequence.
+For deletions: the mean quality of the bases flanking the putatively deleted sequence.
+For haplotypes: the mean quality of allele observations within the haplotype.
+By default, both base and mapping quality are into the reported site quality (QUAL in the VCF) and genotype quality (GQ, when supplying --genotype-qualities). This integration is driven by the "Effective Base Depth" metric first developed in snpTools, which scales observation quality by mapping quality: P(Obs|Genotype) ~ P(MappedCorrectly(Obs))P(SequencedCorrectly(Obs)). Set --standard-gls to use the model described in the freebayes preprint."
 
 
 #What is another way to look that the missing individual - Fastq files?
+#I could also try removing each one and seeing what results that gives.
+
+
+
+#Cross reference for same alleles
+
 
 
 
