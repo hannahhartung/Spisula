@@ -249,6 +249,110 @@ touch output_all.vcf
 grep \"#\" output_DN1.vcf | cat >> output_all.vcf
 grep -v \"#\" output_DN*.vcf | cat >> output_all.vcf
 
+#Date: August 18 2020
+#Filter pilot by no missing data
+#Base sites: 
+264851
+#Filtered
+bcftools filter --include 'COUNT(GT="mis")=0' pilot_unfiltered.vcf --output pilot_noMissing.vcf
+82891
+
+bcftools filter --include 'COUNT(GT="mis")=0' original_unfiltered.vcf --output original_noMissing.vcf
+bgzip original_noMissing.vcf &
+tabix original_noMissing.vcf.gz
+
+#Extract pilot contigs
+grep -v "#" pilot_unfiltered.vcf | awk 'BEGIN{FS=OFS="\t"}{print $1,$2}' > pilot_u_chr_list
+grep -v "#" pilot_noMissing.vcf| awk 'BEGIN{FS=OFS="\t"}{print $1,$2}' > pilot_noM_chr_list
+
+#Pull those contigs out of the originals
+bgzip original_unfiltered.vcf
+tabix original_unfiltered.vcf.gz
+bcftools view -R pilot_u_chr_list -o original_cross_u.vcf -O v original_unfiltered.vcf.gz &
+138275
+bcftools view -R pilot_noM_chr_list -o original_cross_noM.vcf -O v original_noMissing.vcf.gz &
+32374
+
+#Also filter the pilot data to only have the matching sites 
+grep -v "#" original_cross_u.vcf  | awk 'BEGIN{FS=OFS="\t"}{print $1,$2}' > match_u_chr_list
+grep -v "#" original_cross_noM.vcf | awk 'BEGIN{FS=OFS="\t"}{print $1,$2}' > match_noM_chr_list
+bgzip pilot_unfiltered.vcf &
+bgzip pilot_noMissing.vcf &
+tabix pilot_unfiltered.vcf.gz
+tabix pilot_noMissing.vcf.gz &
+bcftools view -R match_u_chr_list --include 'TYPE="snp"' -o pilot_cross_u.vcf -O v pilot_unfiltered.vcf.gz &
+bcftools view -R match_noM_chr_list --include 'TYPE="snp"' -o pilot_cross_noM.vcf -O v pilot_noMissing.vcf.gz &
+bcftools view -R match_u_chr_list --include 'TYPE="snp"' -o original_cross_u.vcf -O v original_unfiltered.vcf.gz &
+bcftools view -R match_noM_chr_list --include 'TYPE="snp"' -o original_cross_noM.vcf -O v original_noMissing.vcf.gz &
+
+#DO THIS WITH SNP ONLY
+
+
+
+#Do FST analysis on these.
+vcftools --vcf pilot_cross_u.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt --out pilot_cross_u
+Weir and Cockerham mean Fst estimate: 0.10224
+Weir and Cockerham weighted Fst estimate: 0.18433
+After filtering, kept 106932 out of a possible 106932 Sites
+vcftools --vcf original_cross_u.vcf --weir-fst-pop samplesSim1.txt --weir-fst-pop samplesSol1.txt --out original_u
+Weir and Cockerham mean Fst estimate: 0.23698
+Weir and Cockerham weighted Fst estimate: 0.36075
+After filtering, kept 130623 out of a possible 130623 Sites
+
+vcftools --vcf pilot_cross_noM.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt --out pilot_cross_no_missing
+Weir and Cockerham mean Fst estimate: 0.098785
+Weir and Cockerham weighted Fst estimate: 0.19061
+After filtering, kept 18088 out of a possible 18088 Sites
+vcftools --vcf original_cross_noM.vcf --weir-fst-pop samplesSim1.txt --weir-fst-pop samplesSol1.txt --out original_cross_no_missing
+Weir and Cockerham mean Fst estimate: 0.14304
+Weir and Cockerham weighted Fst estimate: 0.24661
+After filtering, kept 19877 out of a possible 19877 Sites
+vcftools --vcf pilot_cross_noM.vcf --weir-fst-pop samplesSim_noPEC.txt --weir-fst-pop samplesSol.txt --out pilot_cross_no_missing
+Weir and Cockerham mean Fst estimate: 0.11385
+Weir and Cockerham weighted Fst estimate: 0.2118
+After filtering, kept 18088 out of a possible 18088 Sites
+
+
+#Why are these different numbers? The number of sites should be the same after cross ref twice.
+vcftools --vcf pilot_unfiltered.vcf --out pilot.missing.test.vcf --missing-indv &
+vcftools --vcf original_unfiltered.vcf --out original.missing.test.vcf --missing-indv &
+
+Sol10   2815704 0       231832  0.0823354
+Sim5    2815704 0       287434  0.102082
+Sol7    2815704 0       239953  0.0852195
+Sim4    2815704 0       180516  0.0641104
+Sim6    2815704 0       476204  0.169124
+Sol6    2815704 0       120372  0.0427502
+Sol8    2815704 0       231284  0.0821407
+
+INDV    N_DATA  N_GENOTYPES_FILTERED    N_MISS  F_MISS
+TEST    264850  0       82112   0.310032
+CUP_265 264850  0       85360   0.322296
+PEC_011 264850  0       104600  0.394941     
+MCX_082 264850  0       82110   0.310025
+GA_007  264850  0       79441   0.299947
+SHN_126 264850  0       84276   0.318203
+CUP_352 264850  0       88483   0.334087
+GA_008  264850  0       83516   0.315333
+Sol10   2815704 0       231832  0.0823354
+Sim5    2815704 0       287434  0.102082
+Sol7    2815704 0       239953  0.0852195
+Sim4    2815704 0       180516  0.0641104
+Sim6    2815704 0       476204  0.169124
+Sol6    2815704 0       120372  0.0427502
+Sol8    2815704 0       231284  0.0821407
+
+#PEC_011 is the "off" sample
+vcftools --vcf pilot_cross_u.vcf --weir-fst-pop samplesSim_noPEC.txt --weir-fst-pop samplesSol.txt --out pilot_cross_u
+Weir and Cockerham mean Fst estimate: 0.14842
+Weir and Cockerham weighted Fst estimate: 0.26017
+After filtering, kept 106932 out of a possible 106932 Sites
+vcftools --vcf pilot_cross_noM.vcf --weir-fst-pop samplesSim_noPEC.txt --weir-fst-pop samplesSol.txt --out pilot_cross_no_missing
+Weir and Cockerham mean Fst estimate: 0.11221
+Weir and Cockerham weighted Fst estimate: 0.19845
+After filtering, kept 23139 out of a possible 23139 Sites
+
+
 
 
 
