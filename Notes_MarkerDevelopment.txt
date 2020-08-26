@@ -444,6 +444,263 @@ perl SNP2CAPS.pl example_SNPS2CAPS.fasta rebase.gcg out_SNPS2CAPS
 
 
 
+#Date: August 24 2020
+#Installing perl
+
+#SKIPPED PART 1 - MOVE TO PART 2
+which python3 
+ls -l /usr/local/bin/python3
+python3 -V
+which pip3
+head -n1 /usr/local/bin/pip3
+#1.2 Install and use python module deepTools Install deepTools in the directory ~/.local/
+pip3 install deepTools --user
+export PATH=$HOME/.local/bin:$PATH
+which deeptools
+export LC_ALL=en_US.utf-8
+export LANG=en_US.utf-8
+deeptools
+python3
+import deeptools
+deeptools.__file__
+import numpy
+numpy.__file__
+numpy.__version__ 
+pip3 install deepTools==3.3.2 --prefix /workdir/$USER --ignore-installed
+export PATH=/workdir/$USER/bin:$PATH
+export PYTHONPATH=/workdir/$USER/lib/python3.6/site-packages
+which deeptools
+export LC_ALL=en_US.utf-8
+export LANG=en_US.utf-8
+deeptools
+
+#Part 2. Install PERL software with CPAN
+mkdir ~/perl
+export PERL5LIB=~/perl/lib/perl5
+cpan
+#I got different prompts - answered whatever was most automatic or default
+#The below prompts show up eventually
+#At cpan pompt “cpan[1]>”, type the following commands:
+o conf makepl_arg INSTALL_BASE=~/perl 
+o conf mbuild_arg INSTALL_BASE=~/perl 
+#Please use 'o conf commit' to make the config permanent!
+o conf prefs_dir ~/perl /prefs 
+o conf commit
+install XML::Simple
+
+#This module is only accessible if you “export PERL5LIB=~/perl/lib/perl5”. Delete the whole directory /perl if installation goes wrong.
+export PERL5LIB=~/perl/lib/perl5
+
+#Installation
+#BioPerl distribution has the same name as the BioPerl. However, the BioPerl distribution only includes a subset of the project modules. Because of this, the meaning of "installing BioPerl" is rarely clear. Instead of "install BioPerl", the aim must be "install module X".
+CPAN.org provides an overview on how to install and manage Perl modules but the bottom-line is:
+
+#find the module you need, for example Bio::DB::EUtilities
+#install it with cpanm, for example cpanm Bio::DB::EUtilities
+#Alternatively, some Linux distributions have packaged BioPerl and have it available through their package manager.
+
+#it said restart shell before starting cpan again.
+export PERL5LIB=~/perl/lib/perl5
+cpan #(bioperl says cpanm but that doesn't look like a command)
+install Bio::DB::EUtilities
+#Took a while
+
+#However Tk is installed here: export PERL5LIB=/programs/PERL/lib/perl5/site_perl/5.22.0/x86_64-linux-thread-multi
+install Tk::TK_PATCHLEVEL
+#Says to try using perlbrew so lets see if I need it first
+#Yep, need it
+
+#Try just copying files from the place they were installed
+cp -r /programs/PERL/lib/perl5/site_perl/5.22.0/x86_64-linux-thread-multi/*Tk* /home/hh693/perl/lib/perl5/x86_64-linux-thread-multi
+#Can't tell for sure that Bioperl was installed
+
+#Encode is missing
+cp -r /programs/PERL/lib/perl5/site_perl/5.22.0/x86_64-linux-thread-multi/* /home/hh693/perl/lib/perl5/x86_64-linux-thread-multi
+#This results in lots of permission denieds for things like encoding.
+
+#Seemed more like it worked because it still popped up with "fasta" but still did not finish in 2 seconds
+
+#Try with VNC GUI again
+perl SNP2CAPS.pl -gui
+#Says Tk module is still missing
+#Maybe I need to initialize the perl area again
+#Yep. New error:
+
+bad option "padx": must be -after, -anchor, -before, -expand, -fill, -in, -ipadx, -ipady, -padx, -pady, or -side at /home/hh693/perl/lib/perl5/x86_64-linux-thread-multi/Tk/Widget.pm line 1217.
+ at SNP2CAPS.pl line 122.
+
+
+
+
+#Date: August 25 2020
+#Expand to more contigs
+CONTIGS=(
+TRINITY_DN9354_c1_g1_i8
+TRINITY_DN1450_c0_g1_i1
+TRINITY_DN1584_c0_g2_i16
+TRINITY_DN3363_c0_g1_i4
+TRINITY_DN2796_c1_g1_i7
+TRINITY_DN15869_c1_g1_i1
+TRINITY_DN981_c0_g1_i5
+TRINITY_DN56_c0_g1_i5
+TRINITY_DN1690_c0_g1_i9
+TRINITY_DN1651_c1_g1_i5
+TRINITY_DN1500_c0_g1_i9
+TRINITY_DN628_c0_g1_i6
+TRINITY_DN1480_c0_g3_i2
+TRINITY_DN358_c0_g1_i1
+TRINITY_DN5857_c0_g1_i7
+TRINITY_DN1242_c0_g1_i5
+TRINITY_DN645_c0_g1_i6
+TRINITY_DN1105_c0_g1_i2
+TRINITY_DN662_c2_g1_i1
+TRINITY_DN796_c0_g1_i4
+TRINITY_DN12641_c0_g1_i4
+TRINITY_DN983_c0_g1_i10
+TRINITY_DN2096_c0_g1_i2
+TRINITY_DN4155_c0_g1_i2
+TRINITY_DN1180_c1_g1_i5
+TRINITY_DN838_c0_g1_i6
+TRINITY_DN1736_c0_g1_i6
+TRINITY_DN9354_c0_g1_i6
+TRINITY_DN1911_c0_g1_i5
+TRINITY_DN71_c0_g3_i17
+TRINITY_DN763_c0_g1_i7
+TRINITY_DN897_c0_g1_i2
+TRINITY_DN1628_c0_g1_i7
+TRINITY_DN468_c0_g1_i5
+TRINITY_DN6504_c0_g1_i8
+TRINITY_DN3007_c0_g1_i11
+TRINITY_DN314_c0_g1_i17
+TRINITY_DN2476_c1_g1_i5
+TRINITY_DN1573_c0_g1_i3
+TRINITY_DN6481_c1_g1_i8
+TRINITY_DN6640_c0_g1_i8
+TRINITY_DN432_c1_g1_i7
+TRINITY_DN10826_c0_g1_i3
+TRINITY_DN3830_c0_g1_i5
+TRINITY_DN7558_c0_g1_i7
+TRINITY_DN2028_c0_g1_i6
+TRINITY_DN2520_c0_g1_i5
+TRINITY_DN140_c6_g1_i5
+TRINITY_DN970_c1_g1_i6
+TRINITY_DN3306_c0_g1_i4
+TRINITY_DN351_c0_g1_i2
+TRINITY_DN586_c0_g1_i6
+TRINITY_DN796_c0_g2_i2
+TRINITY_DN2716_c0_g1_i2
+TRINITY_DN195_c0_g1_i9
+TRINITY_DN948_c0_g1_i2
+TRINITY_DN1317_c0_g1_i4
+TRINITY_DN498_c0_g2_i3
+TRINITY_DN3368_c0_g1_i2
+TRINITY_DN1463_c0_g1_i22
+TRINITY_DN194_c0_g1_i8
+TRINITY_DN18461_c0_g1_i3
+TRINITY_DN1339_c0_g1_i3
+TRINITY_DN1080_c1_g1_i1
+TRINITY_DN5655_c2_g1_i2
+TRINITY_DN6852_c0_g1_i2
+TRINITY_DN1853_c0_g1_i1
+TRINITY_DN7620_c0_g1_i4
+TRINITY_DN4162_c1_g1_i4
+TRINITY_DN8864_c0_g1_i1
+TRINITY_DN2355_c2_g1_i2
+TRINITY_DN4538_c6_g1_i2
+TRINITY_DN13691_c0_g1_i1
+TRINITY_DN1482_c0_g1_i1
+TRINITY_DN1970_c0_g1_i8
+TRINITY_DN4369_c0_g1_i4
+TRINITY_DN1085_c0_g1_i1
+TRINITY_DN642_c0_g1_i6
+TRINITY_DN1802_c0_g1_i5
+TRINITY_DN169_c2_g1_i2
+TRINITY_DN9619_c0_g1_i4
+TRINITY_DN73_c0_g1_i4
+TRINITY_DN2168_c0_g1_i9
+TRINITY_DN12723_c0_g1_i3
+TRINITY_DN3155_c1_g1_i3
+TRINITY_DN2710_c0_g1_i5
+TRINITY_DN1609_c0_g1_i4
+TRINITY_DN2567_c5_g1_i2
+TRINITY_DN2214_c2_g1_i14
+TRINITY_DN3478_c0_g1_i4
+TRINITY_DN4519_c1_g1_i8
+TRINITY_DN840_c0_g1_i2
+TRINITY_DN542_c3_g1_i12
+TRINITY_DN1117_c0_g1_i2
+TRINITY_DN2451_c1_g1_i3
+TRINITY_DN9268_c0_g1_i26
+TRINITY_DN7355_c0_g1_i4
+TRINITY_DN224_c0_g1_i5
+TRINITY_DN2868_c0_g1_i4
+TRINITY_DN2054_c0_g1_i4
+)
+
+
+for chr in ${CONTIGS[@]}
+do 
+echo "$chr"
+samtools faidx Sol_ref.fa $chr > ref_$chr.fa
+tmpseq=$(samtools faidx Sol_ref.fa $chr | grep -v ">" |tr -d "\n" | tr '[A-Z]' '[a-z]')
+echo \
+"SEQUENCE_ID=$chr
+SEQUENCE_TEMPLATE=$tmpseq
+PRIMER_TASK=generic
+PRIMER_PICK_LEFT_PRIMER=1
+PRIMER_PICK_INTERNAL_OLIGO=0
+PRIMER_PICK_RIGHT_PRIMER=1
+PRIMER_OPT_SIZE=20
+PRIMER_MIN_SIZE=18
+PRIMER_MAX_SIZE=22
+PRIMER_PRODUCT_SIZE_RANGE=200-300
+PRIMER_EXPLAIN_FLAG=1
+PRIMER_NUM_RETURN=10
+PRIMER_MIN_GC=45
+PRIMER_MAX_GC=60
+PRIMER_MAX_TM=62
+PRIMER_MAX_SELF_ANY=0.0
+PRIMER_MAX_SELF_END=0.0
+PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT=1
+PRIMER_MAX_HAIRPIN_TH=30.0
+PRIMER_WT_HAIRPIN_TH=1
+=" > primer_attempts/primer_$chr.input
+./primer3/src/primer3_core primer_attempts/primer_$chr.input > primer_attempts/primer_$chr.output
+for NUM in 0 1 2 3 4 5 6 7 8 9
+do
+pleft=$(grep "PRIMER_LEFT_$NUM=" primer_attempts/primer_$chr.output | sed 's/^.\{14\}//' | sed 's/.\{3\}$//')
+pright=$(grep "PRIMER_RIGHT_$NUM=" primer_attempts/primer_$chr.output | sed 's/^.\{15\}//' | sed 's/.\{3\}$//')
+bcftools view o_total_filter.vcf.gz -r $chr:$pleft-$pright -o primer_attempts/f_$chr.$NUM.vcf
+usable=$(grep -v "#" primer_attempts/f_$chr.$NUM.vcf | wc -l)
+if [ $usable -ge 1 ]; then
+echo -e "$chr\t$NUM\t$pleft\t$pright\t$usable" >> list_of_sites.txt
+echo "found $usable SNPS"
+#SAVE THE FASTA FILE OF THAT PRIMER PRODUCT
+samtools faidx Sol_ref.fa $chr:$pleft-$pright -o products/p_sol_$chr.$NUM.fasta
+#Grab the fasta of any one similis from because they should all have the same snp at these sites (but what about added snps that it might pick up on)
+#So maybe instead I could use the reference with the vcf (keep only the similis in the vcf)
+bgzip -c primer_attempts/f_$chr.$NUM.vcf > primer_attempts/f_$chr.$NUM.vcf.gz
+tabix primer_attempts/f_$chr.$NUM.vcf.gz
+bcftools view primer_attempts/f_$chr.$NUM.vcf.gz -s Sim4 -O z > primer_attempts/f_sim_$chr.$NUM.vcf.gz
+tabix primer_attempts/f_sim_$chr.$NUM.vcf.gz
+samtools faidx ref_$chr.fa $chr:$pleft-$pright  | vcf-consensus primer_attempts/f_sim_$chr.$NUM.vcf.gz > products/sim_$chr.$NUM.fasta
+#Add species name to header
+sed -i 's/>/>Sim_/' products/sim_$chr.$NUM.fasta
+sed -i 's/>/>Sol_/' products/p_sol_$chr.$NUM.fasta
+#Make into single file for SNP2CAPS
+cat products/*_$chr.$NUM.fasta >> CAPS_input/input_SNP2CAP_$chr.$NUM.fasta
+fi
+done
+done
+
+
+
+
+
+
+
+
+
 #Added to below line -r so it is also only the product produced for sim
 -r $chr:$pleft-$pright 
 samtools faidx ref_$chr.fa $chr:$pleft-$pright  | vcf-consensus in.vcf.gz > out.fa

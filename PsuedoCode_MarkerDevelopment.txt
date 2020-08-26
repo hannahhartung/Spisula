@@ -1,2 +1,34 @@
 Pseudo Code - Marker Development
 
+Transcriptome Creation
+
+Alignment
+
+Creation of vcf files using freebayes
+Parallelize by contig
+Merge vcf files from individual contig files
+
+Filter vcf files
+Diagnostically relevant (with awk)
+Quality and depth filters (vcf and bcf tools)
+
+Create Primer Product
+In batches of large (>> 200 bp) contigs run my code for pulling out Primer3 products with SNPs in them
+Filter also for contigs that contain SNPs
+Pull out that contig from the reference to create a working reference
+echo into job list the Primer3 input including working reference
+find primers that work well on that contig
+confirm the presense of a SNP on that contig
+create a file of similis and solidissima at that primer product location
+concatenate those into a file for SNP2CAPS
+
+Use Primer Products of Similis vs Solidissima as input for SNPS2CAPS 
+reduce total primer database to be those with a reasonable price available from NEBL
+input concatenated primer products
+filter results by ones easy to see on gel 
+	i. 1-2 cuts 
+	ii. difference between fragment length >40bp (ideally >50bp)
+...
+primer_attempts/contig.output
+locate the primer #
+pull primer pair details from Primer3 output file
