@@ -1,3 +1,5 @@
+install.packages("strataG")
+
 library(ggplot2)
 library(tidyverse)
 library(knitr)

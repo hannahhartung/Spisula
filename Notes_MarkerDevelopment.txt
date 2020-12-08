@@ -176,17 +176,84 @@ $13 ~ "0/0" &&\
 $14 ~ "0/0"\
 ) {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16} }' output_DN_all.vcf >>  o_filter_Sim0_Sol1.vcf &
 
-#QUALITY
+#QUALITY, DEPTH AND DISTANCE FROM INDELS
+bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_filter_Sim1_Sol0.vcf | bcftools filter --include 'QUAL>100' | bcftools filter --include 'TYPE="snp"' > output_total_filter.vcf
+bgzip < output_total_filter.vcf > o_total_filter.vcf.gz &
+tabix o_total_filter.vcf.gz
 
-#DEPTH
+#Primer3 and Prepare for SNPS2CAPS
+CONTIGS=(
+TRINITY_DN6365_c3_g1_i3 ... #Fill with all contigs to test
+)
 
-#DISTANCE FROM INDELS
+#Run this for loop in screen
+for chr in ${CONTIGS[@]}
+do 
+echo "$chr"
+samtools faidx Sol_ref.fa $chr > ref_chrs/ref_$chr.fa
+tmpseq=$(samtools faidx Sol_ref.fa $chr | grep -v ">" |tr -d "\n" | tr '[A-Z]' '[a-z]')
+echo \
+"SEQUENCE_ID=$chr
+SEQUENCE_TEMPLATE=$tmpseq
+PRIMER_TASK=generic
+PRIMER_PICK_LEFT_PRIMER=1
+PRIMER_PICK_INTERNAL_OLIGO=0
+PRIMER_PICK_RIGHT_PRIMER=1
+PRIMER_OPT_SIZE=20
+PRIMER_MIN_SIZE=18
+PRIMER_MAX_SIZE=22
+PRIMER_PRODUCT_SIZE_RANGE=200-300
+PRIMER_EXPLAIN_FLAG=1
+PRIMER_NUM_RETURN=10
+PRIMER_MIN_GC=45
+PRIMER_MAX_GC=60
+PRIMER_MAX_TM=62
+PRIMER_MAX_SELF_ANY=0.0
+PRIMER_MAX_SELF_END=0.0
+PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT=1
+PRIMER_MAX_HAIRPIN_TH=30.0
+PRIMER_WT_HAIRPIN_TH=1
+=" > primer_attempts/primer_$chr.input
+./primer3/src/primer3_core primer_attempts/primer_$chr.input > primer_attempts/primer_$chr.output
+for NUM in 0 1 2 3 4 5 6 7 8 9
+do
+pleft=$(grep "PRIMER_LEFT_$NUM=" primer_attempts/primer_$chr.output | sed 's/^.\{14\}//' | sed 's/.\{3\}$//')
+pright=$(grep "PRIMER_RIGHT_$NUM=" primer_attempts/primer_$chr.output | sed 's/^.\{15\}//' | sed 's/.\{3\}$//')
+bcftools view o_total_filter.vcf.gz -r $chr:$pleft-$pright -o primer_attempts/f_$chr.$NUM.vcf
+usable=$(grep -v "#" primer_attempts/f_$chr.$NUM.vcf | wc -l)
+if [ $usable -ge 1 ]; then
+echo -e "$chr\t$NUM\t$pleft\t$pright\t$usable" >> list_of_sites.txt
+echo "found $usable SNPS"
+#SAVE THE FASTA FILE OF THAT PRIMER PRODUCT
+samtools faidx Sol_ref.fa $chr:$pleft-$pright -o products/p_sol_$chr.$NUM.fasta
+#Grab the fasta of any one similis from because they should all have the same snp at these sites (but what about added snps that it might pick up on)
+#So maybe instead I could use the reference with the vcf (keep only the similis in the vcf)
+bgzip -c primer_attempts/f_$chr.$NUM.vcf > primer_attempts/f_$chr.$NUM.vcf.gz
+tabix primer_attempts/f_$chr.$NUM.vcf.gz
+bcftools view primer_attempts/f_$chr.$NUM.vcf.gz -s Sim4 -O z > primer_attempts/f_sim_$chr.$NUM.vcf.gz
+tabix primer_attempts/f_sim_$chr.$NUM.vcf.gz
+samtools faidx ref_chrs/ref_$chr.fa $chr:$pleft-$pright  | vcf-consensus primer_attempts/f_sim_$chr.$NUM.vcf.gz > products/sim_$chr.$NUM.fasta
+#Add species name to header
+sed -i 's/>/>Sim_/' products/sim_$chr.$NUM.fasta
+sed -i 's/>/>Sol_/' products/p_sol_$chr.$NUM.fasta
+#Make into single file for SNP2CAPS
+cat products/*_$chr.$NUM.fasta >> CAPS_input/input_SNP2CAP_$chr.$NUM.fasta
+fi
+done
+done
+
+#Take CAPS_input files to SNP2CAPS.exe on windows machine
 
 
-
-
-
-
+#After finding the good ones, pull the data on the primers
+while read candidate; do
+echo $candidate
+primernum=$(echo "$candidate" | grep -Eo '[0-9]+$') 
+primercandidate=$(echo "${candidate%?}" | tr -d '[:space:]')
+#echo $primercandidate
+grep "PRIMER_.*_$primernum" primer_attempts/primer_$primercandidate.output 
+done < CANDIDATES.txt
+#Where CANDIDATES.txt is a two column list of $isoform	$primer number
 
 
 
@@ -542,106 +609,17 @@ TRINITY_DN3363_c0_g1_i4
 TRINITY_DN2796_c1_g1_i7
 TRINITY_DN15869_c1_g1_i1
 TRINITY_DN981_c0_g1_i5
-TRINITY_DN56_c0_g1_i5
-TRINITY_DN1690_c0_g1_i9
-TRINITY_DN1651_c1_g1_i5
-TRINITY_DN1500_c0_g1_i9
-TRINITY_DN628_c0_g1_i6
-TRINITY_DN1480_c0_g3_i2
-TRINITY_DN358_c0_g1_i1
-TRINITY_DN5857_c0_g1_i7
-TRINITY_DN1242_c0_g1_i5
-TRINITY_DN645_c0_g1_i6
-TRINITY_DN1105_c0_g1_i2
-TRINITY_DN662_c2_g1_i1
-TRINITY_DN796_c0_g1_i4
-TRINITY_DN12641_c0_g1_i4
-TRINITY_DN983_c0_g1_i10
-TRINITY_DN2096_c0_g1_i2
-TRINITY_DN4155_c0_g1_i2
-TRINITY_DN1180_c1_g1_i5
-TRINITY_DN838_c0_g1_i6
-TRINITY_DN1736_c0_g1_i6
-TRINITY_DN9354_c0_g1_i6
-TRINITY_DN1911_c0_g1_i5
-TRINITY_DN71_c0_g3_i17
-TRINITY_DN763_c0_g1_i7
-TRINITY_DN897_c0_g1_i2
-TRINITY_DN1628_c0_g1_i7
-TRINITY_DN468_c0_g1_i5
-TRINITY_DN6504_c0_g1_i8
-TRINITY_DN3007_c0_g1_i11
-TRINITY_DN314_c0_g1_i17
-TRINITY_DN2476_c1_g1_i5
-TRINITY_DN1573_c0_g1_i3
-TRINITY_DN6481_c1_g1_i8
-TRINITY_DN6640_c0_g1_i8
-TRINITY_DN432_c1_g1_i7
-TRINITY_DN10826_c0_g1_i3
-TRINITY_DN3830_c0_g1_i5
-TRINITY_DN7558_c0_g1_i7
-TRINITY_DN2028_c0_g1_i6
-TRINITY_DN2520_c0_g1_i5
-TRINITY_DN140_c6_g1_i5
-TRINITY_DN970_c1_g1_i6
-TRINITY_DN3306_c0_g1_i4
-TRINITY_DN351_c0_g1_i2
-TRINITY_DN586_c0_g1_i6
-TRINITY_DN796_c0_g2_i2
-TRINITY_DN2716_c0_g1_i2
-TRINITY_DN195_c0_g1_i9
-TRINITY_DN948_c0_g1_i2
-TRINITY_DN1317_c0_g1_i4
-TRINITY_DN498_c0_g2_i3
-TRINITY_DN3368_c0_g1_i2
-TRINITY_DN1463_c0_g1_i22
-TRINITY_DN194_c0_g1_i8
-TRINITY_DN18461_c0_g1_i3
-TRINITY_DN1339_c0_g1_i3
-TRINITY_DN1080_c1_g1_i1
-TRINITY_DN5655_c2_g1_i2
-TRINITY_DN6852_c0_g1_i2
-TRINITY_DN1853_c0_g1_i1
-TRINITY_DN7620_c0_g1_i4
-TRINITY_DN4162_c1_g1_i4
-TRINITY_DN8864_c0_g1_i1
-TRINITY_DN2355_c2_g1_i2
-TRINITY_DN4538_c6_g1_i2
-TRINITY_DN13691_c0_g1_i1
-TRINITY_DN1482_c0_g1_i1
-TRINITY_DN1970_c0_g1_i8
-TRINITY_DN4369_c0_g1_i4
-TRINITY_DN1085_c0_g1_i1
-TRINITY_DN642_c0_g1_i6
-TRINITY_DN1802_c0_g1_i5
-TRINITY_DN169_c2_g1_i2
-TRINITY_DN9619_c0_g1_i4
-TRINITY_DN73_c0_g1_i4
-TRINITY_DN2168_c0_g1_i9
-TRINITY_DN12723_c0_g1_i3
-TRINITY_DN3155_c1_g1_i3
-TRINITY_DN2710_c0_g1_i5
-TRINITY_DN1609_c0_g1_i4
-TRINITY_DN2567_c5_g1_i2
-TRINITY_DN2214_c2_g1_i14
-TRINITY_DN3478_c0_g1_i4
-TRINITY_DN4519_c1_g1_i8
-TRINITY_DN840_c0_g1_i2
-TRINITY_DN542_c3_g1_i12
-TRINITY_DN1117_c0_g1_i2
-TRINITY_DN2451_c1_g1_i3
-TRINITY_DN9268_c0_g1_i26
-TRINITY_DN7355_c0_g1_i4
-TRINITY_DN224_c0_g1_i5
-TRINITY_DN2868_c0_g1_i4
 TRINITY_DN2054_c0_g1_i4
 )
+
+#Repeat with following 300
+mv ref_TRIN* primer_attempts/
 
 
 for chr in ${CONTIGS[@]}
 do 
 echo "$chr"
-samtools faidx Sol_ref.fa $chr > ref_$chr.fa
+samtools faidx Sol_ref.fa $chr > ref_chrs/ref_$chr.fa
 tmpseq=$(samtools faidx Sol_ref.fa $chr | grep -v ">" |tr -d "\n" | tr '[A-Z]' '[a-z]')
 echo \
 "SEQUENCE_ID=$chr
@@ -683,7 +661,7 @@ bgzip -c primer_attempts/f_$chr.$NUM.vcf > primer_attempts/f_$chr.$NUM.vcf.gz
 tabix primer_attempts/f_$chr.$NUM.vcf.gz
 bcftools view primer_attempts/f_$chr.$NUM.vcf.gz -s Sim4 -O z > primer_attempts/f_sim_$chr.$NUM.vcf.gz
 tabix primer_attempts/f_sim_$chr.$NUM.vcf.gz
-samtools faidx ref_$chr.fa $chr:$pleft-$pright  | vcf-consensus primer_attempts/f_sim_$chr.$NUM.vcf.gz > products/sim_$chr.$NUM.fasta
+samtools faidx ref_chrs/ref_$chr.fa $chr:$pleft-$pright  | vcf-consensus primer_attempts/f_sim_$chr.$NUM.vcf.gz > products/sim_$chr.$NUM.fasta
 #Add species name to header
 sed -i 's/>/>Sim_/' products/sim_$chr.$NUM.fasta
 sed -i 's/>/>Sol_/' products/p_sol_$chr.$NUM.fasta
@@ -693,11 +671,233 @@ fi
 done
 done
 
+#Sorted by size, start again at 1168
+
+
+
+#Test on new server:
+#Date: October 2 2020
+mkdir /workdir/hh693
+cd /workdir/hh693
+mkdir CAPS_input .
+mkdir primer_attempts . 
+mkdir products .
+cp /home/mph75_0001/shared/Hannah/MarkerDevelopment/Sol_ref* .
+cp -r /home/mph75_0001/shared/Hannah/Spisula/MarkerDevelopment/SNP2CAPS/primer3 . 
+#Can't find o_total_filter.vcf.gz
+#Pull the biggest ones
+#grep ">T" Sol_ref.fa | less -S
+#Used excel to find the longest ones
+#Check fa at that contig and then vcf
+#RETAB FILTER SIM 1 and SOL 0 FOR o_tab_S1S0.vcf
+#FIX THE VCFTOOLS NOT LIKING THE HEASDER
+#Quick workaround: index the file with tabix
+#first compress - ERROR: Failed to parse TBX_VCF, was wrong -p [type] used?
+#CAUSE THESE ONES ARE STILL NOT TAB-DELIMETERED
+#o_filter_Sim1_Sol0.vcf
+	#grep "#" o_filter_Sim1_Sol0.vcf > o_tab_S1S0.vcf
+	#grep -v "#" o_filter_Sim1_Sol0.vcf | tr " " "\t" >> o_tab_S1S0.vcf #Not working - looks like I might have fixed o_filter_Sim0_Sol1.vcf cause it looks tabbed
+	#bgzip -c o_tab_S1S0.vcf > o_tab_S1S0.vcf.gz
+	#bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_tab_S1S0.vcf | bcftools filter --include 'QUAL>100' | bcftools filter --include 'TYPE="snp"' > output_total_filter.vcf
+	#bcftools filter --SnpGap 20 --include 'INFO/DP>200 && INFO/DP<2000' o_filter_Sim1_Sol0.vcf | bcftools filter --include 'QUAL>100' | bcftools filter --include 'TYPE="snp"' > output_total_filter.vcf
+	#samtools faidx Sol_ref.fa TRINITY_DN1893_c0_g1_i3
+	#vcftools --vcf output_total_filter.vcf --chr TRINITY_DN1893_c0_g1_i3 --out filter_TRINITY_DN1893_c0_g1_i3.vcf
+	#bgzip < output_total_filter.vcf > o_total_filter.vcf.gz &
+	#tabix o_total_filter.vcf.gz
+	#bcftools view o_total_filter.vcf.gz -r TRINITY_DN1893_c0_g1_i3 -o filter_TRINITY_DN1893_c0_g1_i3.vcf
+#o_total_filter.vcf.gz
+# cp /home/mph75_0001/shared/Hannah/Spisula/MarkerDevelopment/SNP2CAPS/SNP2CAPS.pl
+
+cp ???/o_total_filter.vcf.gz
+tabix o_total_filter.vcf.gz
+
+
+#CONTIGS
+CONTIGS=(
+TRINITY_DN9354_c1_g1_i8
+TRINITY_DN1450_c0_g1_i1
+TRINITY_DN1584_c0_g2_i16
+TRINITY_DN3363_c0_g1_i4
+TRINITY_DN2796_c1_g1_i7
+TRINITY_DN15869_c1_g1_i1
+TRINITY_DN981_c0_g1_i5
+TRINITY_DN2054_c0_g1_i4
+)
+
+#Compare to original thingies saved from last time for these contigs
+#These weren't save so repeat with some of the ones I do have saved:
+
+CONTIGS=(
+TRINITY_DN6365_c3_g1_i3
+TRINITY_DN6094_c1_g1_i5
+TRINITY_DN600_c0_g1_i4
+TRINITY_DN5814_c0_g1_i1
+TRINITY_DN5710_c0_g1_i2
+TRINITY_DN6432_c0_g1_i1
+)
+
+cmp CAPS_input/input_SNP2CAP_TRINITY_DN6365_c3_g1_i3.4.fasta /home/mph75_0001/shared/Hannah/Spisula/MarkerDevelopment/SNP2CAPS/CAPS_input/input_SNP2CAP_TRINITY_DN6365_c3_g1_i3.4.fasta
+cmp CAPS_input/input_SNP2CAP_TRINITY_DN6432_c0_g1_i1.4.fasta /home/mph75_0001/shared/Hannah/Spisula/MarkerDevelopment/SNP2CAPS/CAPS_input/input_SNP2CAP_TRINITY_DN6432_c0_g1_i1.4.fasta
+#For files that are identical, 'cmp' produces no output.
+#Looking good
+
+#Notice that a list_of_sites.txt file was produced with multiple collumn, unsure where it comes from
+#echo -e "$chr\t$NUM\t$pleft\t$pright\t$usable" >> list_of_sites.txt
+#CHR	#PRIMER PAIR NUMBER		#pos_LEFT		#pos_RIGHT		#Is it usable?(aka number of internal SNPS > 0)
+
+
+#Copy all files via file zilla then on my own terminal, use the list of filtered viable (and not tested) on my computer to move to new directory
+repeaters=(
+
+)
+
+#cd Documents/Hare_Lab/Spisula/SNP2CAPS_inputs/
+#OR DO IT INSIDE SERVER
+ls | wc -l
+for r in ${repeaters[@]}
+do 
+mv CAPS_input/$r CAPS_input/checked/$r
+done
+#removes about 700 of them
+#Worked through 1-2000 longest contigs
+
+#ALSO: FOR TODAY - MOVE ALL BEFORE 1116 TO POSSIBLY CHECKED
+possibles=()
+for ppp in ${possibles[@]}
+do 
+mv CAPS_input/*$ppp* CAPS_input/possibles/$ppp
+done
+#Only moved 12? Could it be the only 12 since the last time I moved the known duplicates? No
+
+
+#Once I SNP check, pull primer stats
+candidate=TRINITY_DN999_c3_g1_i8
+
+rm CANDIDATES.txt 
+touch CANDIDATES.txt 
+nano CANDIDATES.txt 
+#copy and paste
+TRINITY_DN10732_c0_g1_i7 1
+TRINITY_DN1723_c0_g2_i1 0
+TRINITY_DN1723_c0_g2_i1 1
+TRINITY_DN1751_c0_g1_i4 0
+
+#WORKS! PULLS PRIMER STATS FOR ONLY THE RELEVANT PRIMER PAIR from above 2 collumn data
+while read candidate; do
+echo $candidate
+primernum=$(echo "$candidate" | grep -Eo '[0-9]+$') 
+primercandidate=$(echo "${candidate%?}" | tr -d '[:space:]')
+#echo $primercandidate
+grep "PRIMER_.*_$primernum" primer_attempts/primer_$primercandidate.output 
+done < CANDIDATES.txt > Oct21_primer_out.txt
+
+sed 's/=/\t/g' Oct2_eve_primer_out.txt > primer_tabbed2.txt
+
+
+
+#Date: October 3rd
+#New method: align by longer contigs now that I'm only looking for 4 enzymes
+
+#650 to 700 by size
+for chr in ${CONTIGSTEST[@]}
+do 
+echo "$chr"
+samtools faidx Sol_ref.fa $chr > ref_chrs/ref_$chr.fa
+bcftools view o_total_filter.vcf.gz -r $chr -o contig_CAPS_input/f/f_$chr.vcf
+#SAVE THE FASTA FILE OF THAT PRIMER PRODUCT
+samtools faidx Sol_ref.fa $chr -o contig_CAPS_input/products/p_sol_$chr.fasta
+#Grab the fasta of any one similis from because they should all have the same snp at these sites (but what about added snps that it might pick up on)
+#So maybe instead I could use the reference with the vcf (keep only the similis in the vcf)
+bgzip -c contig_CAPS_input/f/f_$chr.vcf > contig_CAPS_input/f/f_$chr.vcf.gz
+tabix contig_CAPS_input/f/f_$chr.vcf.gz
+bcftools view contig_CAPS_input/f/f_$chr.vcf.gz -s Sim4 -O z > contig_CAPS_input/f/f_sim_$chr.vcf.gz
+tabix contig_CAPS_input/f/f_sim_$chr.vcf.gz
+samtools faidx ref_chrs/ref_$chr.fa $chr  | vcf-consensus contig_CAPS_input/f/f_sim_$chr.vcf.gz > contig_CAPS_input/products/sim_$chr.fasta
+#Add species name to header
+sed -i "s/>/>Sim_/" contig_CAPS_input/products/sim_$chr.fasta
+sed -i "s/>/>Sol_/" contig_CAPS_input/products/p_sol_$chr.fasta
+#Make into single file for SNP2CAPS
+cat contig_CAPS_input/products/*_$chr.fasta >> contig_CAPS_input/input_SNP2CAP_$chr.fasta
+#sed -i "s/>T/>Sol_T" contig_CAPS_input/input_SNP2CAP_$chr.fasta
+done
+
+#Date: October 15
+# use those contigs outputs to find primers and test more contigs 
+#And test 700 to 850
+
+#now find primers at those good positions
+#for chr in ${CONTIGS[@]}
+#do 
+
+chr=TRINITY_DN1751_c0_g1_i4
+pos=2521
+pleft=$(($pos-150))
+pright=$(($pos+200))
+
+echo "$chr"
+samtools faidx Sol_ref.fa  $chr:$pleft-$pright > ref_chrs/ref_$chr-$pleft-$pright.fa
+tmpseq=$(samtools faidx Sol_ref.fa $chr:$pleft-$pright | grep -v ">" |tr -d "\n" | tr '[A-Z]' '[a-z]')
+echo \
+"SEQUENCE_ID=$chr
+SEQUENCE_TEMPLATE=$tmpseq
+PRIMER_TASK=generic
+PRIMER_PICK_LEFT_PRIMER=1
+PRIMER_PICK_INTERNAL_OLIGO=0
+PRIMER_PICK_RIGHT_PRIMER=1
+PRIMER_OPT_SIZE=20
+PRIMER_MIN_SIZE=18
+PRIMER_MAX_SIZE=22
+PRIMER_PRODUCT_SIZE_RANGE=200-300
+PRIMER_EXPLAIN_FLAG=1
+PRIMER_NUM_RETURN=10
+PRIMER_MIN_GC=45
+PRIMER_MAX_GC=60
+PRIMER_MAX_TM=62
+PRIMER_MAX_SELF_ANY=0.0
+PRIMER_MAX_SELF_END=0.0
+PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT=1
+PRIMER_MAX_HAIRPIN_TH=30.0
+PRIMER_WT_HAIRPIN_TH=1
+=" > primer_attempts/primer_$chr-$pleft-$pright.input
+./primer3/src/primer3_core primer_attempts/primer_$chr-$pleft-$pright.input > contig_CAPS_input/primers_out/primer_$chr-$pleft-$pright.output
+returned=$(grep "PRIMER_PAIR_NUM_RETURNED=" contig_CAPS_input/primers_out/primer_$chr-$pleft-$pright.output | sed 's/^.\{25\}//')
+#if [$returned -ne 0]; then
+#less contig_CAPS_input/primers_out/primer_$chr-$pleft-$pright.output
+#fi
+
+less contig_CAPS_input/primers_out/primer_$chr-$pleft-$pright.output
+
+#done
+
+
+
+
+samtools faidx Sol_ref.fa  $chr:622-922 > ref_chrs/ref_$chr-622-922.fa
 
 
 
 
 
+
+
+
+#Pull Primer info
+primer_TRINITY_DN*.output
+
+
+
+#Naming primers
+#the accession 'TRINITY_DN1000_c115_g5_i1' indicates Trinity read cluster 'TRINITY_DN1000_c115', gene 'g5', and isoform 'i1'
+#So I should not need to include i # because there should be no duplicates
+
+#g up to 7, no double digits, no g0
+#c0, up past c30 but not triple
+
+#Numbers ######_### A   R
+#         DN    c g *  L/R        * only included when more than one primer per contig
+#         1-6   2-3 0-1 1 digits
+
+#Spis######_###AR
 
 
 

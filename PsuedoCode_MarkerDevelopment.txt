@@ -18,7 +18,7 @@ Filter also for contigs that contain SNPs
 Pull out that contig from the reference to create a working reference
 echo into job list the Primer3 input including working reference
 find primers that work well on that contig
-confirm the presense of a SNP on that contig
+confirm the presense of at least one SNP on that primer product for similis
 create a file of similis and solidissima at that primer product location
 concatenate those into a file for SNP2CAPS
 
@@ -32,3 +32,4 @@ filter results by ones easy to see on gel
 primer_attempts/contig.output
 locate the primer #
 pull primer pair details from Primer3 output file
+Refer to them now as dRFLP (diagnostic RFLP)
