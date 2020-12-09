@@ -120,7 +120,7 @@ diverge[5,] <- 1 - diverge[5,]
 diverge <- diverge %>%
   rbind(c(diverge$L116[4]-diverge$L116[5],diverge$L148[4]-diverge$L148[5],diverge$L203[4]-diverge$L203[5],diverge$L430[4]-diverge$L430[5],diverge$L447[4]-diverge$L447[5]))
 
-rownames(diverge) <- c("New Sim |O-E|", " New Sol |O-E|", "Difference in Detection", "Old Sim |O-E|", "Old Sol |O-E|", "Old Difference in Detection")
+rownames(diverge) <- c("New Sim (O-E)", " New Sol (O-E)", "Difference in Detection", "Old Sim (O-E)", "Old Sol (O-E)", "Old Difference in Detection")
 
 kable(diverge)
 
@@ -130,4 +130,39 @@ Note here than in rows 3 and 6, *postive* values for difference in detection mea
 
 I have looked through my excel calculations from earlier and have still not found the error yet but clearly this was a better way to do the calculation if you agree with my math.
 
+### By population
+```{r bysite}
+bysite <- samples %>%
+  group_by(`Site`) %>%
+  summarize(L116 = (mean(L116_allele_1[!is.na(L116_allele_1)]) + mean(L116_allele_2[!is.na(L116_allele_2)]))/2, 
+            L148 = (mean(L148_allele_1[!is.na(L148_allele_1)]) + mean(L148_allele_2[!is.na(L148_allele_2)]))/2, 
+            L203 = (mean(L203_allele_1[!is.na(L203_allele_1)]) + mean(L203_allele_2[!is.na(L203_allele_2)]))/2,
+            L430 = (mean(L430_allele_1[!is.na(L430_allele_1)]) + mean(L430_allele_2[!is.na(L430_allele_2)]))/2,
+            L447 = (mean(L447_allele_1[!is.na(L447_allele_1)]) + mean(L447_allele_2[!is.na(L447_allele_2)]))/2)
+#Set NAs to be a - to reduce clutter
+options(knitr.kable.NA = '-')
+kable(bysite, digits=1)
+```
 
+Showing Solidissima allele frequency (a 1.0 means that all those were solidissima, a 0.0 means all similis)
+
+These are condensed into broader areas below.
+
+```{r byloc, echo=FALSE}
+byloc <- samples %>%
+  group_by(`Location`) %>%
+  summarize(L116 = (mean(L116_allele_1[!is.na(L116_allele_1)]) + mean(L116_allele_2[!is.na(L116_allele_2)]))/2, 
+            L148 = (mean(L148_allele_1[!is.na(L148_allele_1)]) + mean(L148_allele_2[!is.na(L148_allele_2)]))/2, 
+            L203 = (mean(L203_allele_1[!is.na(L203_allele_1)]) + mean(L203_allele_2[!is.na(L203_allele_2)]))/2,
+            L430 = (mean(L430_allele_1[!is.na(L430_allele_1)]) + mean(L430_allele_2[!is.na(L430_allele_2)]))/2,
+            L447 = (mean(L447_allele_1[!is.na(L447_allele_1)]) + mean(L447_allele_2[!is.na(L447_allele_2)]))/2)
+
+kable(byloc, digits=1)
+```
+
++ Where George's Bank is just GBE - expected solidissima (1.0).
++ Georgia is just GA - expected similis (0.0).
++ Massachusetts, PT and MW - mixed.
++ Northern Long Islang - mostly similis (0.0).
++ Southern Long Island - mostly solidissima (1.0).
++ Reisman Hatery - mixed, more solidissima.

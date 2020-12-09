@@ -130,18 +130,18 @@ diverge[5,] <- 1 - diverge[5,]
 diverge <- diverge %>%
   rbind(c(diverge$L116[4]-diverge$L116[5],diverge$L148[4]-diverge$L148[5],diverge$L203[4]-diverge$L203[5],diverge$L430[4]-diverge$L430[5],diverge$L447[4]-diverge$L447[5]))
 
-rownames(diverge) <- c("New Sim |O-E|", " New Sol |O-E|", "Difference in Detection", "Old Sim |O-E|", "Old Sol |O-E|", "Old Difference in Detection")
+rownames(diverge) <- c("New Sim (O-E)", " New Sol (O-E)", "Difference in Detection", "Old Sim (O-E)", "Old Sol (O-E)", "Old Difference in Detection")
 
 kable(diverge)
 ```
 
 |                             |        L116 |        L148 |      L203 |      L430 |      L447 |
 | --------------------------- | ----------: | ----------: | --------: | --------: | --------: |
-| New Sim |O-E|               |   0.1355932 |   0.0409836 | 0.0846154 | 0.4237288 | 0.0984848 |
-| New Sol |O-E|               |   0.4583333 |   0.2903226 | 0.0547945 | 0.0866667 | 0.0197368 |
+| New Sim (O-E)               |   0.1355932 |   0.0409836 | 0.0846154 | 0.4237288 | 0.0984848 |
+| New Sol (O-E)               |   0.4583333 |   0.2903226 | 0.0547945 | 0.0866667 | 0.0197368 |
 | Difference in Detection     | \-0.3227401 | \-0.2493390 | 0.0298209 | 0.3370621 | 0.0787480 |
-| Old Sim |O-E|               |   0.5750000 |   0.5282258 | 0.5688406 | 0.7500000 | 0.5809859 |
-| Old Sol |O-E|               |   0.2291667 |   0.1451613 | 0.0289855 | 0.0477941 | 0.0105634 |
+| Old Sim (O-E)               |   0.5750000 |   0.5282258 | 0.5688406 | 0.7500000 | 0.5809859 |
+| Old Sol (O-E)               |   0.2291667 |   0.1451613 | 0.0289855 | 0.0477941 | 0.0105634 |
 | Old Difference in Detection |   0.3458333 |   0.3830645 | 0.5398551 | 0.7022059 | 0.5704225 |
 
 Note here than in rows 3 and 6, *postive* values for difference in
@@ -155,3 +155,56 @@ anti-similis bias that we previously concluded).
 I have looked through my excel calculations from earlier and have still
 not found the error yet but clearly this was a better way to do the
 calculation if you agree with my math.
+
+### By population
+
+``` r
+bysite <- samples %>%
+  group_by(`Site`) %>%
+  summarize(L116 = (mean(L116_allele_1[!is.na(L116_allele_1)]) + mean(L116_allele_2[!is.na(L116_allele_2)]))/2, 
+            L148 = (mean(L148_allele_1[!is.na(L148_allele_1)]) + mean(L148_allele_2[!is.na(L148_allele_2)]))/2, 
+            L203 = (mean(L203_allele_1[!is.na(L203_allele_1)]) + mean(L203_allele_2[!is.na(L203_allele_2)]))/2,
+            L430 = (mean(L430_allele_1[!is.na(L430_allele_1)]) + mean(L430_allele_2[!is.na(L430_allele_2)]))/2,
+            L447 = (mean(L447_allele_1[!is.na(L447_allele_1)]) + mean(L447_allele_2[!is.na(L447_allele_2)]))/2)
+#Set NAs to be a - to reduce clutter
+options(knitr.kable.NA = '-')
+kable(bysite, digits=1)
+```
+
+| Site     | L116 | L148 | L203 | L430 | L447 |
+| :------- | ---: | ---: | ---: | ---: | ---: |
+| A - ARC  |   \- |   \- |  1.0 |  1.0 |  1.0 |
+| B - ICO  |  0.5 |  1.0 |  1.0 |  1.0 |  1.0 |
+| BLP      |  0.3 |  1.0 |  0.9 |  0.9 |  1.0 |
+| C - MVSG |  0.0 |  0.0 |  0.0 |  0.3 |  0.0 |
+| CUP      |  0.3 |  1.0 |  1.0 |  0.9 |  1.0 |
+| GA       |  0.1 |  0.0 |  0.0 |  0.3 |  0.1 |
+| GBE      |  0.9 |  0.2 |  1.0 |  1.0 |  1.0 |
+| GLD      |  0.2 |  0.0 |  0.3 |  0.2 |  0.0 |
+| MCX      |  0.8 |  1.0 |  1.0 |  1.0 |  1.0 |
+| MW       |  0.2 |  0.1 |  0.1 |  0.6 |  0.1 |
+| PEC      |  0.0 |  0.0 |  0.2 |  0.0 |  0.2 |
+| PT       |  0.9 |  1.0 |  1.0 |  0.8 |  1.0 |
+| SHN      |  0.7 |  0.0 |  0.9 |  0.9 |  1.0 |
+| TEST     |   \- |   \- |  0.8 |   \- |  0.5 |
+
+Showing Solidissima allele frequency (a 1.0 means that all those were
+solidissima, a 0.0 means all similis)
+
+These are condensed into broader areas below.
+
+| Location             | L116 | L148 | L203 | L430 | L447 |
+| :------------------- | ---: | ---: | ---: | ---: | ---: |
+| George’s Bank        |  0.9 |  0.2 |  1.0 |  1.0 |  1.0 |
+| Georgia              |  0.1 |  0.0 |  0.0 |  0.3 |  0.1 |
+| Massachusetts        |  0.3 |  0.3 |  0.2 |  0.6 |  0.3 |
+| Northern Long Island |  0.1 |  0.0 |  0.4 |  0.1 |  0.2 |
+| Reitsman Hatchery    |  0.1 |  0.2 |  0.4 |  0.6 |  0.4 |
+| Southern Long Island |  0.4 |  0.7 |  1.0 |  0.9 |  1.0 |
+
+  - Where George’s Bank is just GBE - expected solidissima (1.0).
+  - Georgia is just GA - expected similis (0.0).
+  - Massachusetts, PT and MW - mixed.
+  - Northern Long Islang - mostly similis (0.0).
+  - Southern Long Island - mostly solidissima (1.0).
+  - Reisman Hatery - mixed, more solidissima.
