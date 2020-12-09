@@ -122,7 +122,7 @@ diverge <- diverge %>%
 
 rownames(diverge) <- c("New Sim (O-E)", " New Sol (O-E)", "Difference in Detection", "Old Sim (O-E)", "Old Sol (O-E)", "Old Difference in Detection")
 
-kable(diverge)
+kable(diverge, digits = 2)
 
 ```
 

@@ -132,17 +132,17 @@ diverge <- diverge %>%
 
 rownames(diverge) <- c("New Sim (O-E)", " New Sol (O-E)", "Difference in Detection", "Old Sim (O-E)", "Old Sol (O-E)", "Old Difference in Detection")
 
-kable(diverge)
+kable(diverge, digits = 2)
 ```
 
-|                             |        L116 |        L148 |      L203 |      L430 |      L447 |
-| --------------------------- | ----------: | ----------: | --------: | --------: | --------: |
-| New Sim (O-E)               |   0.1355932 |   0.0409836 | 0.0846154 | 0.4237288 | 0.0984848 |
-| New Sol (O-E)               |   0.4583333 |   0.2903226 | 0.0547945 | 0.0866667 | 0.0197368 |
-| Difference in Detection     | \-0.3227401 | \-0.2493390 | 0.0298209 | 0.3370621 | 0.0787480 |
-| Old Sim (O-E)               |   0.5750000 |   0.5282258 | 0.5688406 | 0.7500000 | 0.5809859 |
-| Old Sol (O-E)               |   0.2291667 |   0.1451613 | 0.0289855 | 0.0477941 | 0.0105634 |
-| Old Difference in Detection |   0.3458333 |   0.3830645 | 0.5398551 | 0.7022059 | 0.5704225 |
+|                             |   L116 |   L148 | L203 | L430 | L447 |
+| --------------------------- | -----: | -----: | ---: | ---: | ---: |
+| New Sim (O-E)               |   0.14 |   0.04 | 0.08 | 0.42 | 0.10 |
+| New Sol (O-E)               |   0.46 |   0.29 | 0.05 | 0.09 | 0.02 |
+| Difference in Detection     | \-0.32 | \-0.25 | 0.03 | 0.34 | 0.08 |
+| Old Sim (O-E)               |   0.57 |   0.53 | 0.57 | 0.75 | 0.58 |
+| Old Sol (O-E)               |   0.23 |   0.15 | 0.03 | 0.05 | 0.01 |
+| Old Difference in Detection |   0.35 |   0.38 | 0.54 | 0.70 | 0.57 |
 
 Note here than in rows 3 and 6, *postive* values for difference in
 detection mean that similis is being detected less well at this locus
