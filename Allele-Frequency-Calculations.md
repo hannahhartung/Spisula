@@ -64,6 +64,99 @@ kable(head(samples))
 
 #### Calculations
 
+##### Comparing Summation and Mean Methods
+
+``` r
+usingmean <- samples %>%
+  group_by(`Mitochondrial Marker`) %>%
+  summarize(L116 = (mean(L116_allele_1[!is.na(L116_allele_1)]) + mean(L116_allele_2[!is.na(L116_allele_2)]))/2, 
+            L148 = (mean(L148_allele_1[!is.na(L148_allele_1)]) + mean(L148_allele_2[!is.na(L148_allele_2)]))/2, 
+            L203 = (mean(L203_allele_1[!is.na(L203_allele_1)]) + mean(L203_allele_2[!is.na(L203_allele_2)]))/2,
+            L430 = (mean(L430_allele_1[!is.na(L430_allele_1)]) + mean(L430_allele_2[!is.na(L430_allele_2)]))/2,
+            L447 = (mean(L447_allele_1[!is.na(L447_allele_1)]) + mean(L447_allele_2[!is.na(L447_allele_2)]))/2)
+
+#     of L116 allele 1,     in rows that aren't NA,        how many are exactly 1 (solidissima allele)
+sum(samples$L116_allele_1[!is.na(samples$L116_allele_1)] == 1)
+```
+
+    ## [1] 28
+
+``` r
+#     the same for allele 2
+sum(samples$L116_allele_2[!is.na(samples$L116_allele_2)] == 1) 
+```
+
+    ## [1] 53
+
+``` r
+# this is more because hybrids have a 0 for allele 1 and a 1 for allele 2
+
+#the total number of non-na's from the two alleles
+sum(!is.na(samples$L116_allele_1)) + sum(!is.na(samples$L116_allele_2))     #119 from each is 238 total
+```
+
+    ## [1] 238
+
+``` r
+# double check by adding all of the 1 and 0s from both alleles together
+sum(samples$L116_allele_1[!is.na(samples$L116_allele_1)] == 1) +
+  sum(samples$L116_allele_2[!is.na(samples$L116_allele_2)] == 1) +
+  sum(samples$L116_allele_1[!is.na(samples$L116_allele_1)] == 0) +
+  sum(samples$L116_allele_2[!is.na(samples$L116_allele_2)] == 0)
+```
+
+    ## [1] 238
+
+``` r
+# also 238
+
+# Ratio of allele = 1 / allele = not NA
+( sum(samples$L116_allele_1[!is.na(samples$L116_allele_1)] == 1) +
+  sum(samples$L116_allele_2[!is.na(samples$L116_allele_2)] == 1) ) /
+  ( sum(!is.na(samples$L116_allele_1)) + sum(!is.na(samples$L116_allele_2)) )
+```
+
+    ## [1] 0.3403361
+
+``` r
+# Repeat using tidyverse group_by and summarize
+usingbasic <- samples %>%
+  group_by(`Mitochondrial Marker`) %>%
+  summarize(L116 = ( sum(L116_allele_1[!is.na(L116_allele_1)] == 1) +                  # allele 1 = 1
+                      sum(L116_allele_2[!is.na(L116_allele_2)] == 1) ) /               # allele 2 = 1
+                      ( sum(!is.na(L116_allele_1)) + sum(!is.na(L116_allele_2)) ),     # allele 1 & 2 is 1 or 0
+            L148 = ( sum(L148_allele_1[!is.na(L148_allele_1)] == 1) +  
+                      sum(L148_allele_2[!is.na(L148_allele_2)] == 1) ) /       
+                      ( sum(!is.na(L148_allele_1)) + sum(!is.na(L148_allele_2)) ),
+            L203 = ( sum(L203_allele_1[!is.na(L203_allele_1)] == 1) +  
+                      sum(L203_allele_2[!is.na(L203_allele_2)] == 1) ) /       
+                      ( sum(!is.na(L203_allele_1)) + sum(!is.na(L203_allele_2)) ),
+            L430 = ( sum(L430_allele_1[!is.na(L430_allele_1)] == 1) +  
+                      sum(L430_allele_2[!is.na(L430_allele_2)] == 1) ) /       
+                      ( sum(!is.na(L430_allele_1)) + sum(!is.na(L430_allele_2)) ),
+            L447 = ( sum(L447_allele_1[!is.na(L447_allele_1)] == 1) +  
+                      sum(L447_allele_2[!is.na(L447_allele_2)] == 1) ) /       
+                      ( sum(!is.na(L447_allele_1)) + sum(!is.na(L447_allele_2)) ))
+       
+kable(usingmean, digits = 4)
+```
+
+| Mitochondrial Marker |   L116 |   L148 |   L203 |   L430 |   L447 |
+| :------------------- | -----: | -----: | -----: | -----: | -----: |
+| similis              | 0.1356 | 0.0410 | 0.0846 | 0.4237 | 0.0985 |
+| solidissima          | 0.5417 | 0.7097 | 0.9452 | 0.9133 | 0.9803 |
+
+``` r
+kable(usingbasic, digits = 4)
+```
+
+| Mitochondrial Marker |   L116 |   L148 |   L203 |   L430 |   L447 |
+| :------------------- | -----: | -----: | -----: | -----: | -----: |
+| similis              | 0.1356 | 0.0410 | 0.0846 | 0.4237 | 0.0985 |
+| solidissima          | 0.5417 | 0.7097 | 0.9452 | 0.9133 | 0.9803 |
+
+##### Using Mean to Calculate Frequency
+
   - Mitochondrial and each locus allele frequencies over all samples.
   - Allele frequencies of each locus splitting into two populations:
     mitochondrial similis and solidissima.
