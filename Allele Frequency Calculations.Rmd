@@ -1,5 +1,5 @@
 ---
-title: "Allele Frequency Calculations"
+title: "Marker Development: Allele Frequency Calculations"
 output: github_document
 ---
 

@@ -1,4 +1,4 @@
-Allele Frequency Calculations
+Marker Development: Allele Frequency Calculations
 ================
 
 ## For Primer Pairs L116, L148, L203, L430, and L447
