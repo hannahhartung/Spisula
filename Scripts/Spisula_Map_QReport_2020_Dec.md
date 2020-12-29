@@ -123,7 +123,7 @@ tm_shape(us_states, bbox=eastcoast) +
 #For the future: to reverse a pallette, easy as: palette = rev("Set2")
 ```
 
-### Final Adjustments
+### Adjustments
 
 Possible iterations of the graph: +Where color or shape indicate species
 +Whiter background +Where size is number of samples taken at the site
@@ -239,13 +239,155 @@ map_7
 
 ``` r
 #Filled in small circles
-map_1 <- 2
-
-tm_shape(us_states, bbox=eastcoast) +  
-  tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey90") +
+map_1 <- tm_shape(us_states, bbox=eastcoast) +  
+  tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey95") +
   tm_grid(col="white") +
   tm_shape(spissites) +  
   tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "Set2") 
+
+tm_shape(world) + tm_polygons()
 ```
 
 ![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/finaladjust-8.png)<!-- -->
+
+### Add continental Shelf Data
+
+``` r
+#Adding continental shelf and georges bank contours if avaliable
+url <- "https://services5.arcgis.com/YCKZmP6DZSq3o9Gi/arcgis/rest/services/Continental_Shelf/FeatureServer/0"
+shelf <- read.csv(url)
+#read in shapefile
+#Remember to include all the other similar files
+bary_iso <- st_read("/Users/hannah/gitHub/Spisula/Work/shape/bathymetry_l_v2.shp")
+```
+
+    ## Reading layer `bathymetry_l_v2' from data source `/Users/hannah/gitHub/Spisula/Work/shape/bathymetry_l_v2.shp' using driver `ESRI Shapefile'
+    ## Simple feature collection with 4197 features and 5 fields
+    ## geometry type:  LINESTRING
+    ## dimension:      XY
+    ## bbox:           xmin: -5835002 ymin: -3920000 xmax: 4462000 ymax: 4907000
+    ## proj4string:    +proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs
+
+``` r
+#basic tmap with shapefile
+tm_shape(bary_iso) + tm_lines()
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/continental%20shelf-1.png)<!-- -->
+
+``` r
+#Works, now try to crop it to my map shape
+tm_shape(bary_iso, bbox=eastcoast) + tm_lines()
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/continental%20shelf-2.png)<!-- -->
+
+``` r
+#came up blank, probably different coordinate systems
+
+#Try with boston example
+#From: https://www.kaggle.com/umeshnarayanappa/quickstart-guide-shapefiles-and-r-tmap
+
+boston <- st_read(dsn ="/Users/hannah/gitHub/Spisula/Work/shape/boston_police_districts_f55.shp")
+```
+
+    ## Reading layer `boston_police_districts_f55' from data source `/Users/hannah/gitHub/Spisula/Work/shape/boston_police_districts_f55.shp' using driver `ESRI Shapefile'
+    ## Simple feature collection with 12 features and 5 fields
+    ## geometry type:  MULTIPOLYGON
+    ## dimension:      XY
+    ## bbox:           xmin: 739826.9 ymin: 2908285 xmax: 804052.5 ymax: 2970073
+    ## CRS:            2249
+
+``` r
+#From: http://worldmap.harvard.edu/data/geonode:boston_police_districts_f55
+tm_shape(us_states)+tm_polygons()+
+  tm_shape(boston) + tm_polygons() + tm_graticules()
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/continental%20shelf-3.png)<!-- -->
+
+``` r
+#Tiny little boston
+
+tm_shape(us_states, bbox=eastcoast) +  
+  tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey95") +
+  tm_grid(col="white") +
+  tm_shape(spissites) +  
+  tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "Set2") +
+  tm_shape(boston) + tm_polygons() + tm_graticules()
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/continental%20shelf-4.png)<!-- -->
+
+``` r
+#Added boston to my map
+
+#Try adding shelf to world
+tm_shape(world) + tm_polygons() +
+  tm_shape(bary_iso) + tm_lines()
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/continental%20shelf-5.png)<!-- -->
+
+``` r
+#Some issue with where they each draw the lines for the pacific
+
+#Try with us_States
+tm_shape(us_states) + tm_polygons() +
+  tm_shape(bary_iso) + tm_lines()
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/continental%20shelf-6.png)<!-- -->
+
+``` r
+#Close except the pacific line is still gross.
+#I could take wild guesses to remove those lines
+#tm_shape(bary_iso[1,]) + tm_lines()
+bary_map2 <- tm_shape(us_states) + tm_polygons() + tm_shape(bary_iso[c(1:3170,3172:4000),]) + tm_lines()
+bary_map2
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/continental%20shelf-7.png)<!-- -->
+
+``` r
+#THE BAD LINE IS IN ROW 3171
+
+#Change the shape file
+bary_us <- bary_iso[-3171,]
+tm_shape(us_states) + tm_polygons() + tm_shape(bary_us) + tm_lines()
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/continental%20shelf-8.png)<!-- -->
+
+``` r
+#Now try with east coast
+tm_shape(us_states, bbox=eastcoast) +  tm_polygons() + tm_shape(bary_us) + tm_lines()
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/continental%20shelf-9.png)<!-- -->
+
+``` r
+#Woohooo!!
+```
+
+### Final Options
+
+``` r
+map_f1 <- 2
+
+tm_shape(us_states, bbox=eastcoast) + tm_fill(alpha = 0) +
+  tm_graticules(col = "white", lwd = 0.7) +
+  tm_shape(bary_us, bbox=eastcoast) + tm_lines(col = "grey30", lwd = 1) +
+  tm_shape(us_states, bbox=eastcoast) +
+  tm_fill(col = "grey86") + tm_borders(col="grey30") + tm_layout(bg.color = "grey99") +
+  tm_shape(spissites) +  
+  tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "Set2", border.col = "grey30") 
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/applycomments-1.png)<!-- -->
+
+``` r
+map_f1
+```
+
+    ## [1] 2
