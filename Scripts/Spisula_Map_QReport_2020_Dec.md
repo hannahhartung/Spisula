@@ -254,9 +254,14 @@ tm_shape(world) + tm_polygons()
 
 ``` r
 #Adding continental shelf and georges bank contours if avaliable
+#Did not work
 url <- "https://services5.arcgis.com/YCKZmP6DZSq3o9Gi/arcgis/rest/services/Continental_Shelf/FeatureServer/0"
 shelf <- read.csv(url)
 #read in shapefile
+
+#USGS FILE FROM:
+#https://www.sciencebase.gov/catalog/item/4fb69a6be4b03ad19d64b4c2
+
 #Remember to include all the other similar files
 bary_iso <- st_read("/Users/hannah/gitHub/Spisula/Work/shape/bathymetry_l_v2.shp")
 ```
@@ -373,21 +378,13 @@ tm_shape(us_states, bbox=eastcoast) +  tm_polygons() + tm_shape(bary_us) + tm_li
 ### Final Options
 
 ``` r
-map_f1 <- 2
-
 tm_shape(us_states, bbox=eastcoast) + tm_fill(alpha = 0) +
   tm_graticules(col = "white", lwd = 0.7) +
   tm_shape(bary_us, bbox=eastcoast) + tm_lines(col = "grey30", lwd = 1) +
   tm_shape(us_states, bbox=eastcoast) +
   tm_fill(col = "grey86") + tm_borders(col="grey30") + tm_layout(bg.color = "grey99") +
   tm_shape(spissites) +  
-  tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "Set2", border.col = "grey30") 
+  tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "Set2", border.col = "grey30")
 ```
 
 ![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/applycomments-1.png)<!-- -->
-
-``` r
-map_f1
-```
-
-    ## [1] 2
