@@ -135,13 +135,13 @@ eastcoast=st_bbox(c(xmin = -85, xmax = -65,
 #Base
 map_1 <- tm_shape(us_states, bbox=eastcoast) +  
   tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey90") +
-  tm_grid(col="white") +
+  tm_graticules(col="white") +
   tm_shape(spissites) +  
   tm_symbols(size = 1, col = "Species", alpha = 0.5,  palette = "Set2", border.alpha = 0.2)
 #Size = number of samples
 map_2 <- tm_shape(us_states, bbox=eastcoast) +  
   tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey90") +
-  tm_grid(col="white") +
+  tm_graticules(col="white") +
   tm_shape(spissites) +  
   tm_symbols(size = "Samples", col = "Species", alpha = 0.5,  palette = "Set2", border.alpha = NA)
 #Also changed border alpha to default
@@ -150,14 +150,14 @@ map_2 <- tm_shape(us_states, bbox=eastcoast) +
 #By shapes
 map_3 <- tm_shape(us_states, bbox=eastcoast) +  
   tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey90") +
-  tm_grid(col="white") +
+  tm_graticules(col="white") +
   tm_shape(spissites) +  
   tm_symbols(size = 1, shape = "Species",  alpha = 0.7,  col= "Samples", palette = "Reds")
 
 #Try to change size and jitter (for sites with both)
 map_4 <- tm_shape(us_states, bbox=eastcoast) +  
   tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey90") +
-  tm_grid(col="white") +
+  tm_graticules(col="white") +
   tm_shape(spissites) +  
   tm_symbols(size = "Samples", col = "Species", alpha = 0.7,  palette = "Set2",
              scale = 2.5, jitter = 0.01) 
@@ -168,7 +168,7 @@ map_4 <- tm_shape(us_states, bbox=eastcoast) +
 #Circles not filled in
 map_5 <- tm_shape(us_states, bbox=eastcoast) +  
   tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey90") +
-  tm_grid(col="white") +
+  tm_graticules(col="white") +
   tm_shape(spissites) +  
   tm_symbols(size = "Samples", alpha = 1, col = "Species",shape=1, border.lwd = 2, palette = "Set2",
              scale = 2.5, jitter = 0.01) 
@@ -177,9 +177,15 @@ map_5 <- tm_shape(us_states, bbox=eastcoast) +
 #map_1 at larger scale
 map_6 <- tm_shape(us_states, bbox=eastcoast) +  
   tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey90") +
-  tm_grid(col="white") +
+  tm_graticules(col="white") +
   tm_shape(spissites) +  
   tm_symbols(size = 1, jitter= 0.01 ,col = "Species",  palette = "Set2",alpha = 0.6,border.lwd = 0.7,  border.alpha = 0.5, scale = 1.5)
+
+map_7 <- tm_shape(us_states, bbox=eastcoast) +  
+  tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey94") +
+  tm_graticules(col="white") +
+  tm_shape(spissites) +  
+  tm_symbols(size = 1, jitter= 0.1, shape=1 ,col = "Species",  palette = "Set2",border.lwd = 2, scale = 1.5)
 
 #tmap_arrange(map_1,map_2,map_3)
 
@@ -223,3 +229,23 @@ map_6
 ```
 
 ![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/finaladjust-6.png)<!-- -->
+
+``` r
+#Base with empty circles
+map_7
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/finaladjust-7.png)<!-- -->
+
+``` r
+#Filled in small circles
+map_1 <- 2
+
+tm_shape(us_states, bbox=eastcoast) +  
+  tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey90") +
+  tm_grid(col="white") +
+  tm_shape(spissites) +  
+  tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "Set2") 
+```
+
+![](Spisula_Map_QReport_2020_Dec_files/figure-gfm/finaladjust-8.png)<!-- -->
