@@ -301,13 +301,80 @@ tm_shape(us_states, bbox=eastcoast) +  tm_polygons() + tm_shape(bary_us) + tm_li
 
 ```{r applycomments}
 tm_shape(us_states, bbox=eastcoast) + tm_fill(alpha = 0) +
-  tm_graticules(col = "white", lwd = 0.7) +
   tm_shape(bary_us, bbox=eastcoast) + tm_lines(col = "grey30", lwd = 1) +
   tm_shape(us_states, bbox=eastcoast) +
   tm_fill(col = "grey86") + tm_borders(col="grey30") + tm_layout(bg.color = "grey99") +
+  tm_graticules(col = "white", lwd = 0.7) +
   tm_shape(spissites) +  
   tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "Set2", border.col = "grey30")
+
+tm_shape(us_states, bbox=eastcoast) + tm_fill(alpha = 0) +
+  tm_graticules(col = "white", lwd = 0.7) +
+  tm_shape(bary_us, bbox=eastcoast) + tm_lines(col = "grey30", lwd = 1) +
+  tm_shape(us_states, bbox=eastcoast) +
+  tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey86") +
+  tm_shape(spissites) +  
+  tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "Set2", border.col = "grey30")
+
+
 ```
+### For internal use: add site names to map
+```{r names}
+#for visibility, crop to only the northeast
+necoast=st_bbox(c(xmin = -74, xmax = -69.5,
+                      ymin = 40, ymax = 43), 
+                  crs = st_crs(us_states)) %>% st_as_sfc()
+
+tm_shape(us_states, bbox=necoast) + tm_fill(alpha = 0) +
+  tm_graticules(col = "white", lwd = 0.7) +
+  tm_shape(bary_us, bbox=eastcoast) + tm_lines(col = "grey30", lwd = 1) +
+  tm_shape(us_states, bbox=eastcoast) +
+  tm_fill(col = "grey99") + tm_borders(col="grey30") + tm_layout(bg.color = "grey86") +
+  tm_shape(spissites) +  
+  tm_symbols(size = 0.2,col = "Species",  palette = "Set2", border.col = "grey30") +
+  tm_text("Location", size = 0.6, just="left")
+
+#just massachusettes - i know the LI sites
+mass_coast=st_bbox(c(xmin = -71.25, xmax = -69.5,
+                      ymin = 41.2, ymax = 42.3), 
+                  crs = st_crs(us_states)) %>% st_as_sfc()
+
+```
+
+
+
+
+### Adapting Silva & Caetano 2020 to look nicer for quarterly report
+```{r backcross}
+bc <- read_csv("/Users/hannah/gitHub/Spisula/Work/silva_backcross.csv")
+
+#bc$Population <- factor(bc$Population, levels = bc$Population[order(bc$p95)])
+
+
+#set colors for legend
+colors <- c("95%" = "orange", "99%" = "skyblue2")
+#PUT THE NAMED COLORS INSIDE aes
+#add
+#  labs(color = "Legend") +
+#    scale_color_manual(values = colors)
+
+ggplot(bc) +
+  geom_point(aes(x=Population, y=p95, color="95%"), size=3) +
+  stat_smooth(aes(x=Population, y=p95),method = "lm",formula = y ~ x + I(x^2), color="orange", size=1.1, lty="dotted", se=FALSE) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4),
+                   labels = c("F2", "BC1", "BC2", "BC3")) + 
+  geom_point(aes(x=Population, y=p99, color="99%"), size=3) +
+  stat_smooth(aes(x=Population, y=p99),method = "lm",formula = y ~ x + I(x^2), color="skyblue2", size=1.1, lty="dotted", se=FALSE) +
+  theme_bw(base_size = 15) +
+  theme(legend.position = c(0.3, 0.7))+
+  ylab("Number of Markers") +
+  labs(color = "Certainty of Detection") +
+    scale_color_manual(values = colors)
+```
+
+
+
+### GGmap attempt
 
 ```{r tryggmap, include=FALSE, message=FALSE, eval=FALSE}
 library(lubridate)

@@ -226,3 +226,11 @@ kable(byloc, digits=1)
 + Northern Long Islang - mostly similis (0.0).
 + Southern Long Island - mostly solidissima (1.0).
 + Reisman Hatery - mixed, more solidissima.
+
+### For (practice) extractions - Which samples might I need more of anyway because they showed interesting patterns
+```{r which}
+#stats and dplyr both have filter functions and I have both loaded?
+
+hyb <- filter(samples, L203 == "hybrid" | L430 == "hybrid" | L447 == "hybrid")
+
+```
