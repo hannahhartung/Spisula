@@ -32,7 +32,7 @@ Lanes <- c(rep("MW_uncut",271),rep("MW_5",271),rep("MW_35",271),rep("MW_uncut2",
 dat <- cbind(dat, Lanes)
 
 
-dat
+head(dat)
 
 #create a for loop to do this across all of them,
 #plot x=offset_percent, y= profile, and y2= background, grouped in plots by lanes 
