@@ -234,3 +234,90 @@ kable(byloc, digits=1)
 hyb <- filter(samples, L203 == "hybrid" | L430 == "hybrid" | L447 == "hybrid")
 
 ```
+
+
+### Hybrid Index
+```{r index}
+
+samples %>% 
+  mutate(hybrid_index = mean(L116_allele_1,L116_allele_2,
+                             L148_allele_1,L148_allele_2,
+                             L203_allele_1,L203_allele_2,
+                             L430_allele_1,L430_allele_2,
+                             L447_allele_1,L447_allele_2, na.rm=TRUE))
+
+samples_hi <- mutate(samples, hybrid_index = rowMeans(select(samples, contains("allele")), na.rm = TRUE))
+samples_hi_sub <- samples_hi[-grep("Reitsman", samples_hi$Location), ]
+
+
+samples_hi_sub[which(samples_hi_sub[,3]=="Northern Long Island"),3] <- "Long Island North Shore"
+samples_hi_sub[which(samples_hi_sub[,3]=="Southern Long Island"),3] <- "Long Island South Shore"
+
+#nrow(samples_hi_sub[str_detect(samples_hi_sub1$Location, "North"), ])
+
+set.seed(6619);samples_hi_sub %>%
+   mutate(Location = factor(Location, levels=c("Georgia", "Long Island South Shore", "Long Island North Shore", "Massachusetts",  "George's Bank"))) %>%
+  ggplot(aes(hybrid_index, Location, colour = `Mitochondrial Marker`)) + 
+  geom_jitter(width = 0.05, height = 0.2) +
+  scale_color_manual(values=c("#ff9715ff", "#8be067ff"))
+
+samples_hi_sub1 <- samples_hi_sub
+samples_hi_sub1$`Mitochondrial Marker`[84] <- 'microsatellite admixed'
+samples_hi_sub1$`Mitochondrial Marker`[92] <- 'microsatellite admixed'
+samples_hi_sub1$`Mitochondrial Marker`[95] <- 'microsatellite admixed'
+samples_hi_sub1$`Mitochondrial Marker`[109] <- 'microsatellite admixed'
+
+set.seed(6619);samples_hi_sub1 %>%
+   mutate(Location = factor(Location, levels=c("Georgia", "Long Island South Shore", "Long Island North Shore", "Massachusetts",  "George's Bank"))) %>%
+  ggplot(aes(hybrid_index, Location, colour = `Mitochondrial Marker`)) + 
+  geom_jitter(width = 0.05, height = 0.2) +
+  scale_color_manual(values=c("#f20253ff", "#ff9715ff", "#a4fd7eff"))
+
+#Put in order: 6619, 234
+#GBE, Mass, n LI, s LI, GA
+   
+
+samples_hi_sub1[str_detect(samples_hi_sub1$Location, "North"), ]
+```
+```{r exportreimport}
+
+#For speed
+#write.csv(samples,"hybridallele.csv")
+hybridsamples<-read_csv("hybridallele2.csv")
+hybridsamples[which(hybridsamples[,3]=="Northern Long Island"),3] <- "Long Island North Shore"
+hybridsamples[which(hybridsamples[,3]=="Southern Long Island"),3] <- "Long Island South Shore"
+hybridsamples <- hybridsamples[-grep("Reitsman", hybridsamples$Location), ]
+
+
+set.seed(699);hybridsamples %>%
+   mutate(Location = factor(Location, levels=c("Georgia", "Long Island South Shore", "Long Island North Shore", "Massachusetts",  "George's Bank"))) %>%
+  ggplot(aes(`Hybrid Index`, Location, colour = `Mitochondrial Marker`)) + 
+  geom_jitter(width = 0.02, height = 0.2,size=3) +
+  scale_color_manual(values=c("#ff9715ff", "#8be067ff")) +
+  theme_minimal(base_size = 22) +
+  xlim(0,1)
+
+samples_hi_sub1 <- hybridsamples
+samples_hi_sub1$`Mitochondrial Marker`[84] <- 'microsatellite admixed'
+samples_hi_sub1$`Mitochondrial Marker`[85] <- 'microsatellite admixed'
+samples_hi_sub1$`Mitochondrial Marker`[92] <- 'microsatellite admixed'
+samples_hi_sub1$`Mitochondrial Marker`[95] <- 'microsatellite admixed'
+samples_hi_sub1$`Mitochondrial Marker`[109] <- 'microsatellite admixed'
+
+set.seed(699);samples_hi_sub1 %>%
+   mutate(Location = factor(Location, levels=c("Georgia", "Long Island South Shore", "Long Island North Shore", "Massachusetts",  "George's Bank"))) %>%
+  ggplot(aes(`Hybrid Index`, Location, colour = `Mitochondrial Marker`)) + 
+  geom_jitter(width = 0.02, height = 0.2, size=3) +
+  scale_color_manual(values=c("#f20253ff", "#ff9715ff", "#a4fd7eff")) +
+  theme_minimal(base_size = 22) +
+  xlim(0,1)
+```
+
+
+
+```{r number of data points}
+samples_hi_sub[str_detect(samples_hi_sub1$Location, "North"), ] %>%
+  ggplot(aes(hybrid_index, Location, colour = `Mitochondrial Marker`)) + 
+  geom_jitter(width = 0.01, height = 0.2) +
+  scale_color_manual(values=c("#ff9715ff", "#8be067ff"))
+```

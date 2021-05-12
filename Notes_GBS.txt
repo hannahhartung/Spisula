@@ -48,6 +48,141 @@ samtools flagstat PEC_011_iso_output.bam > PEC_011_flagstat.txt &		43.25%
 samtools flagstat SHN_126_iso_output.bam > SHN_126_flagstat.txt &		55.46%
 samtools flagstat TEST_010_iso_output.bam > TEST_010_flagstat.txt &		60.94%
 
+#Date: Feb 2 2021
+#Map Pilot 2 Data to Transcriptome to compare
+cd /home/mph75_0001/shared/Hannah/Spisula/GBS
+cp /home/mph75_0001/shared/Hannah/Spisula/GBS/pilot_data/Hare_Project_002/*.gz /workdir/hh693
+cd /workdir/hh693
+
+SAMPLES=(
+    CTM-001_S4
+    CTM-002_S5
+    ELP-002_S6
+    GLD_001_S1
+    GLD_005_1x_S2
+    GLD_005_2x_S3
+    PPB-001_S7
+    PPB-002_S8
+)
+#Clean
+export PATH=/programs/bbmap-38.73:$PATH
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "$SAMPLE"
+	bbduk.sh in=$SAMPLE'_R1_001.fastq.gz' out=$SAMPLE'_clean_R1.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& logs_align/$SAMPLE'_bbmap.log'
+done
+
+#Align to reference
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+REFFASTA=Sol_ref.fa
+#Clean is taking too long, combine with the list here
+#for SAMPLE in "${SAMPLES[@]}"; do
+#	echo "echo $SAMPLE"
+#	echo "bbduk.sh in=$SAMPLE'_R1_001.fastq.gz' out=$SAMPLE'_clean_R1.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& logs_align/$SAMPLE'_bbmap.log'"
+#done > j_GBS_p2clean_bwa.txt
+
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "bwa mem -t 8 -R '@RG\tID:${SAMPLE}\tSM:${SAMPLE}\tLB:${SAMPLE}\tPL:ILLUMINA' Sol_ref.fa ${SAMPLE}_clean_R1.fastq.gz | samtools view -Sb -@8 -o ${SAMPLE}_iso_output.bam -"
+done > j_GBS_p2_bwa.txt
+
+#Append the bwa to the clean
+#cat j_GBS_p2clean_bwa.txt j_GBS_p2_bwa.txt > j_GBS_p2_align.txt
+
+screen
+parallel -j 1 < j_GBS_p2_bwa.txt
+
+#Date: Feb 2 2021
+#Align both Pilot's to mitochondrial
+#Mactra chinensis:  KJ754823
+#Prepare reference:
+TMP=/workdir/hh693/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+gatk CreateSequenceDictionary -R KJ754823_mito_ref.fa -O KJ754823_mito_ref.dict
+samtools faidx KJ754823_mito_ref.fa
+#Index for BWA alignment
+bwa index KJ754823_mito_ref.fa
+
+#Move clean fastas from pilot 1 to workdir
+cp /home/mph75_0001/shared/Hannah/Spisula/GBS/pilot_001_analysis/GBS_clean_reads/*clean* /workdir/hh693
+
+#Align both to mito
+SAMPLES=(
+    CUP_265
+    CUP_352
+    GA_007
+    GA_008
+    MCX_082
+    PEC_011
+    SHN_126
+    TEST_010
+    CTM-001_S4
+    CTM-002_S5
+    ELP-002_S6
+    GLD_001_S1
+    GLD_005_1x_S2
+    GLD_005_2x_S3
+    PPB-001_S7
+    PPB-002_S8
+)
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "bwa mem -t 4 -R '@RG\tID:${SAMPLE}\tSM:${SAMPLE}\tLB:${SAMPLE}\tPL:ILLUMINA' KJ754823_mito_ref.fa ${SAMPLE}_clean_R1.fastq.gz | samtools view -Sb -@4 -o mito_aligns/${SAMPLE}_mito_output.bam - >& logs_align/$SAMPLE'_bwa_mito.log"
+done > j_GBS_mito.txt
+screen
+parallel -j 4 < j_GBS_mito_wlog.txt
+
+
+#Date: Feb 3 2021
+mkdir align_stats
+#Check flagstats
+samtools flagstat CTM-001_S4_iso_output.bam  > align_stats/CTM-001_S4_flagstat.txt	&
+#Takes about 45 seconds
+less align_stats/CTM-001_S4_flagstat.txt    52.91%   mapped
+#This is a similis, the ones from last time were a mix.
+SAMPLES=(
+    CTM-001_S4
+    CTM-002_S5
+    ELP-002_S6
+    GLD_001_S1
+    GLD_005_1x_S2
+    GLD_005_2x_S3
+    PPB-001_S7
+    PPB-002_S8
+)
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo $SAMPLE
+	samtools flagstat mito_aligns/$SAMPLE'_mito_output.bam'  > align_stats/$SAMPLE'_mito_flagstat.txt'
+done
+
+
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo $SAMPLE
+	samtools flagstat $SAMPLE'_iso_output.bam'  > align_stats/$SAMPLE'_iso_flagstat.txt'
+done
+
+
+#Flagstat is not what we want, examine log files
+#Make sure you save the log files from the alignments (as opposed to clean logs)
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "bwa mem -t 8 -R '@RG\tID:${SAMPLE}\tSM:${SAMPLE}\tLB:${SAMPLE}\tPL:ILLUMINA' Sol_ref.fa ${SAMPLE}_clean_R1.fastq.gz 2> logs_align/$SAMPLE'_TEST_bwa.log' > ${SAMPLE}_iso_TEST_output.sam"
+done > j_GBS_p2_bwa_wlog_TEST.txt
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "echo 'convert to bam''"
+	echo "samtools view -Sb -@8 ${SAMPLE}_iso_TEST_output.sam -o ${SAMPLE}_iso_TEST_output.bam -"
+done >> j_GBS_p2_bwa_wlog_TEST.txt
+parallel -j 4 < j_GBS_p2_bwa_wlog_TEST.txt
+#This does not save log file.
+
+
+
+
+#Date: June 29 2020
+
 #What were the flagstats for the originals?
 #About 95%
 

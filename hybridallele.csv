@@ -1,0 +1,171 @@
+"","Sample ID","Site","Location","Site Expected Species","Year","Mitochondrial Marker","L116","L148","L203","L430","L447","L116_allele_1","L116_allele_2","L148_allele_1","L148_allele_2","L203_allele_1","L203_allele_2","L430_allele_1","L430_allele_2","L447_allele_1","L447_allele_2"
+"1","A - ARC 006","A - ARC","Reitsman Hatchery","Solidissima",2020,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"2","A - ARC 007","A - ARC","Reitsman Hatchery","Solidissima",2020,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"3","B - ICO 008","B - ICO","Reitsman Hatchery","Solidissima",2020,"solidissima","hybrid","solidissima",NA,NA,NA,0,1,1,1,NA,NA,NA,NA,NA,NA
+"4","B - ICO 015","B - ICO","Reitsman Hatchery","Solidissima",2020,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"5","BLP0819_181","BLP","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima","similis","hybrid","solidissima",0,1,1,1,0,0,0,1,1,1
+"6","BLP0819_182","BLP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"7","BLP0819_183","BLP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"8","BLP0819_184","BLP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"9","BLP0819_185","BLP","Southern Long Island","Solidissima",2019,"solidissima","solidissima","solidissima",NA,"solidissima","solidissima",1,1,1,1,NA,NA,1,1,1,1
+"10","BLP0819_186","BLP","Southern Long Island","Solidissima",2019,"solidissima","solidissima","solidissima","solidissima","solidissima","solidissima",1,1,1,1,1,1,1,1,1,1
+"11","BLP0819_187","BLP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"12","BLP0819_190","BLP","Southern Long Island","Solidissima",2019,"solidissima",NA,"solidissima","solidissima",NA,"solidissima",NA,NA,1,1,1,1,NA,NA,1,1
+"13","BLP0819_191","BLP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","hybrid","solidissima",0,0,1,1,1,1,0,1,1,1
+"14","BLP0819_192","BLP","Southern Long Island","Solidissima",2019,"solidissima","solidissima","solidissima","solidissima","solidissima","solidissima",1,1,1,1,1,1,1,1,1,1
+"15","BLP0819_193","BLP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"16","BLP0819_194","BLP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"17","BLP0819_200","BLP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"18","BLP0819_201","BLP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"19","BLP0819_203","BLP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"20","C - MVSG 002","C - MVSG","Reitsman Hatchery","Similis",2020,"similis","similis","similis","similis","hybrid","similis",0,0,0,0,0,0,0,1,0,0
+"21","C - MVSG 003","C - MVSG","Reitsman Hatchery","Similis",2020,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"22","C - MVSG 006","C - MVSG","Reitsman Hatchery","Similis",2020,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"23","C - MVSG 008","C - MVSG","Reitsman Hatchery","Similis",2020,"similis",NA,NA,"similis","hybrid","similis",NA,NA,NA,NA,0,0,0,1,0,0
+"24","C - MVSG 009","C - MVSG","Reitsman Hatchery","Similis",2020,"similis",NA,NA,"similis","similis","similis",NA,NA,NA,NA,0,0,0,0,0,0
+"25","C - MVSG 010","C - MVSG","Reitsman Hatchery","Similis",2020,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"26","C - MVSG 011","C - MVSG","Reitsman Hatchery","Similis",2020,"similis",NA,NA,"similis","hybrid","similis",NA,NA,NA,NA,0,0,0,1,0,0
+"27","C - MVSG 012","C - MVSG","Reitsman Hatchery","Similis",2020,"similis",NA,NA,"similis","similis","similis",NA,NA,NA,NA,0,0,0,0,0,0
+"28","CUP0819_244","CUP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"29","CUP0819_253","CUP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"30","CUP0819_260","CUP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"31","CUP0819_283","CUP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"32","CUP0819_284","CUP","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima",NA,NA,NA,0,1,1,1,NA,NA,NA,NA,NA,NA
+"33","CUP0819_285","CUP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima",NA,NA,NA,0,0,1,1,NA,NA,NA,NA,NA,NA
+"34","CUP0819_286","CUP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima",NA,NA,NA,0,0,1,1,NA,NA,NA,NA,NA,NA
+"35","CUP0819_322","CUP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","hybrid","solidissima",NA,NA,NA,NA,1,1,0,1,1,1
+"36","CUP0819_323","CUP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"37","CUP0819_324","CUP","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"38","CUP0819_353","CUP","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima","solidissima","solidissima","solidissima",0,1,1,1,1,1,1,1,1,1
+"39","CUP0819_354","CUP","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima","solidissima","solidissima","solidissima",0,1,1,1,1,1,1,1,1,1
+"40","CUP0819_361","CUP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"41","CUP0819_362","CUP","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima",NA,"solidissima","solidissima",0,1,1,1,NA,NA,1,1,1,1
+"42","CUP0819_363","CUP","Southern Long Island","Solidissima",2019,"solidissima","solidissima","solidissima","solidissima","solidissima","solidissima",1,1,1,1,1,1,1,1,1,1
+"43","CUP0819_364","CUP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","hybrid","solidissima",0,0,1,1,1,1,0,1,1,1
+"44","CUP0819_372","CUP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"45","CUP0819_379","CUP","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima","solidissima","solidissima","solidissima",0,1,1,1,1,1,1,1,1,1
+"46","CUP0819_380","CUP","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima","solidissima","solidissima","solidissima",0,1,1,1,1,1,1,1,1,1
+"47","CUP0819_381","CUP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","hybrid","solidissima",0,0,1,1,1,1,0,1,1,1
+"48","CUP0819_395","CUP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"49","CUP0819_396","CUP","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima","solidissima","hybrid","solidissima",0,1,1,1,1,1,0,1,1,1
+"50","CUP0819_397","CUP","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima","solidissima","solidissima","solidissima",0,1,1,1,1,1,1,1,1,1
+"51","CUP0819_399","CUP","Southern Long Island","Solidissima",2019,"solidissima","similis","solidissima","solidissima","solidissima","solidissima",0,0,1,1,1,1,1,1,1,1
+"52","GA12_001","GA","Georgia","Similis",2012,"similis","similis",NA,NA,"similis","similis",0,0,NA,NA,NA,NA,0,0,0,0
+"53","GA12_002","GA","Georgia","Similis",2012,"similis","solidissima","similis","similis","similis","similis",1,1,0,0,0,0,0,0,0,0
+"54","GA12_003","GA","Georgia","Similis",2012,"similis",NA,NA,"similis","similis","similis",NA,NA,NA,NA,0,0,0,0,0,0
+"55","GA12_004","GA","Georgia","Similis",2012,"similis","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"56","GA12_005","GA","Georgia","Similis",2012,"similis",NA,"similis","similis",NA,NA,NA,NA,0,0,0,0,NA,NA,NA,NA
+"57","GA12_006","GA","Georgia","Similis",2012,"similis",NA,NA,"similis",NA,NA,NA,NA,NA,NA,0,0,NA,NA,NA,NA
+"58","GA12_007","GA","Georgia","Similis",2012,"similis",NA,NA,"similis",NA,"similis",NA,NA,NA,NA,0,0,NA,NA,0,0
+"59","GA12_008","GA","Georgia","Similis",2012,"similis",NA,NA,"similis","similis","similis",NA,NA,NA,NA,0,0,0,0,0,0
+"60","GA12_009","GA","Georgia","Similis",2012,"similis","similis","similis","similis","hybrid","similis",0,0,0,0,0,0,0,1,0,0
+"61","GA12_010","GA","Georgia","Similis",2012,"similis","hybrid","similis","similis","similis","similis",0,1,0,0,0,0,0,0,0,0
+"62","GA12_011","GA","Georgia","Similis",2012,"similis","similis","similis","similis","solidissima","similis",0,0,0,0,0,0,1,1,0,0
+"63","GA12_012","GA","Georgia","Similis",2012,"similis","similis","similis","similis","solidissima","similis",0,0,0,0,0,0,1,1,0,0
+"64","GA12_014","GA","Georgia","Similis",2012,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"65","GA12_015","GA","Georgia","Similis",2012,"similis",NA,NA,"similis","similis","similis",NA,NA,NA,NA,0,0,0,0,0,0
+"66","GA12_016","GA","Georgia","Similis",2012,"similis",NA,NA,"similis","hybrid","similis",NA,NA,NA,NA,0,0,0,1,0,0
+"67","GA12_017","GA","Georgia","Similis",2012,"similis","similis","similis","hybrid","similis","hybrid",0,0,0,0,0,1,0,0,0,1
+"68","GA12_018","GA","Georgia","Similis",2012,"similis","similis","similis","hybrid","similis","hybrid",0,0,0,0,0,1,0,0,0,1
+"69","GA12_020","GA","Georgia","Similis",2012,"similis","similis","similis","similis","hybrid","hybrid",0,0,0,0,0,0,0,1,0,1
+"70","GA12_021","GA","Georgia","Similis",2012,"similis","similis","similis","similis","hybrid","hybrid",0,0,0,0,0,0,0,1,0,1
+"71","GA12_022","GA","Georgia","Similis",2012,"similis","similis","similis","similis","hybrid","similis",0,0,0,0,0,0,0,1,0,0
+"72","GA12_023","GA","Georgia","Similis",2012,"similis","hybrid","similis","similis","hybrid","similis",0,1,0,0,0,0,0,1,0,0
+"73","GA12_024","GA","Georgia","Similis",2012,"similis","similis","similis","similis","solidissima","hybrid",0,0,0,0,0,0,1,1,0,1
+"74","GBE0819_263","GBE","George's Bank","Solidissima",2019,"solidissima","solidissima","solidissima",NA,NA,NA,1,1,1,1,NA,NA,NA,NA,NA,NA
+"75","GBE0819_401","GBE","George's Bank","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"76","GBE0819_402","GBE","George's Bank","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"77","GBE0819_442","GBE","George's Bank","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"78","GBE0819_443","GBE","George's Bank","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"79","GBE0819_522","GBE","George's Bank","Solidissima",2019,"solidissima","hybrid","similis","solidissima","solidissima","solidissima",0,1,0,0,1,1,1,1,1,1
+"80","GBE0819_523","GBE","George's Bank","Solidissima",2019,"solidissima","solidissima","similis","solidissima","solidissima","solidissima",1,1,0,0,1,1,1,1,1,1
+"81","GBE0819_524","GBE","George's Bank","Solidissima",2019,"solidissima","solidissima","similis","solidissima","solidissima","solidissima",1,1,0,0,1,1,1,1,1,1
+"82","GLD0819_001","GLD","Northern Long Island","Similis",2019,"similis",NA,NA,NA,NA,"similis",NA,NA,NA,NA,NA,NA,NA,NA,0,0
+"83","GLD0819_002","GLD","Northern Long Island","Similis",2019,"similis",NA,NA,"similis","similis","similis",NA,NA,NA,NA,0,0,0,0,0,0
+"84","GLD0819_003","GLD","Northern Long Island","Similis",2019,"similis",NA,NA,"hybrid","hybrid","similis",NA,NA,NA,NA,0,1,0,1,0,0
+"85","GLD0819_004","GLD","Northern Long Island","Similis",2019,"similis",NA,NA,"hybrid","similis","similis",NA,NA,NA,NA,0,1,0,0,0,0
+"86","GLD0819_005","GLD","Northern Long Island","Similis",2019,"similis","hybrid","similis",NA,NA,NA,0,1,0,0,NA,NA,NA,NA,NA,NA
+"87","GLD0819_006","GLD","Northern Long Island","Similis",2019,"similis","hybrid","similis",NA,NA,NA,0,1,0,0,NA,NA,NA,NA,NA,NA
+"88","GLD0819_007","GLD","Northern Long Island","Similis",2019,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"89","GLD0819_008","GLD","Northern Long Island","Similis",2019,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"90","MCX0819_061","MCX","Southern Long Island","Solidissima",2019,"solidissima","solidissima","solidissima",NA,NA,NA,1,1,1,1,NA,NA,NA,NA,NA,NA
+"91","MCX0819_062","MCX","Southern Long Island","Solidissima",2019,"solidissima","hybrid","solidissima",NA,NA,NA,0,1,1,1,NA,NA,NA,NA,NA,NA
+"92","MCX0819_069","MCX","Southern Long Island","Solidissima",2019,"solidissima","solidissima","solidissima",NA,NA,NA,1,1,1,1,NA,NA,NA,NA,NA,NA
+"93","MCX0819_078","MCX","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"94","MCX0819_079","MCX","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"95","MCX0819_080","MCX","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"96","MW001","MW","Massachusetts","Similis",2012,"solidissima","solidissima","solidissima","solidissima","solidissima","solidissima",1,1,1,1,1,1,1,1,1,1
+"97","MW002","MW","Massachusetts","Similis",2012,"solidissima","solidissima","solidissima","solidissima","solidissima","solidissima",1,1,1,1,1,1,1,1,1,1
+"98","MW009","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"99","MW011","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","solidissima","similis",0,0,0,0,0,0,1,1,0,0
+"100","MW012","MW","Massachusetts","Similis",2012,"similis","similis","similis","hybrid","solidissima","similis",0,0,0,0,0,1,1,1,0,0
+"101","MW013","MW","Massachusetts","Similis",2012,"similis","similis","similis","hybrid","similis","similis",0,0,0,0,0,1,0,0,0,0
+"102","MW014","MW","Massachusetts","Similis",2012,"similis","similis","similis","hybrid","hybrid","similis",0,0,0,0,0,1,0,1,0,0
+"103","MW015","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","solidissima","hybrid",0,0,0,0,0,0,1,1,0,1
+"104","MW016","MW","Massachusetts","Similis",2012,"similis","solidissima","solidissima",NA,NA,NA,1,1,1,1,NA,NA,NA,NA,NA,NA
+"105","MW017","MW","Massachusetts","Similis",2012,"solidissima","similis","similis","similis","solidissima","hybrid",0,0,0,0,0,0,1,1,0,1
+"106","MW018","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","solidissima","similis",0,0,0,0,0,0,1,1,0,0
+"107","MW019","MW","Massachusetts","Similis",2012,"similis","solidissima","similis","similis","solidissima","hybrid",1,1,0,0,0,0,1,1,0,1
+"108","MW020","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","hybrid","hybrid",0,0,0,0,0,0,0,1,0,1
+"109","MW021","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"110","MW022","MW","Massachusetts","Similis",2012,"similis","hybrid","hybrid","similis","hybrid","similis",0,1,0,1,0,0,0,1,0,0
+"111","MW023","MW","Massachusetts","Similis",2012,"similis","solidissima","similis","similis","similis","similis",1,1,0,0,0,0,0,0,0,0
+"112","MW024","MW","Massachusetts","Similis",2012,"similis","hybrid","similis","similis","solidissima","similis",0,1,0,0,0,0,1,1,0,0
+"113","MW025","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","solidissima","similis",0,0,0,0,0,0,1,1,0,0
+"114","MW026","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","solidissima","similis",0,0,0,0,0,0,1,1,0,0
+"115","MW027","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","solidissima","similis",0,0,0,0,0,0,1,1,0,0
+"116","MW028","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","hybrid","similis",0,0,0,0,0,0,0,1,0,0
+"117","MW029","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"118","MW030","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"119","MW031","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"120","MW032","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","solidissima","similis",0,0,0,0,0,0,1,1,0,0
+"121","MW033","MW","Massachusetts","Similis",2012,"similis","solidissima","solidissima",NA,NA,NA,1,1,1,1,NA,NA,NA,NA,NA,NA
+"122","MW034","MW","Massachusetts","Similis",2012,"solidissima","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"123","MW035","MW","Massachusetts","Similis",2012,"similis",NA,"similis","similis","similis","similis",NA,NA,0,0,0,0,0,0,0,0
+"124","MW036","MW","Massachusetts","Similis",2012,"similis",NA,"similis","similis","solidissima","similis",NA,NA,0,0,0,0,1,1,0,0
+"125","MW037","MW","Massachusetts","Similis",2012,"similis",NA,"similis","similis","similis","similis",NA,NA,0,0,0,0,0,0,0,0
+"126","MW038","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","hybrid","hybrid",0,0,0,0,0,0,0,1,0,1
+"127","MW039","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","solidissima","similis",0,0,0,0,0,0,1,1,0,0
+"128","MW041","MW","Massachusetts","Similis",2012,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"129","MW042","MW","Massachusetts","Similis",2012,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"130","MW043","MW","Massachusetts","Similis",2012,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"131","MW044","MW","Massachusetts","Similis",2012,"similis","similis","similis",NA,NA,NA,0,0,0,0,NA,NA,NA,NA,NA,NA
+"132","MW061","MW","Massachusetts","Similis",2012,"similis",NA,NA,NA,"solidissima","similis",NA,NA,NA,NA,NA,NA,1,1,0,0
+"133","MW062","MW","Massachusetts","Similis",2012,"similis",NA,NA,"similis","solidissima","similis",NA,NA,NA,NA,0,0,1,1,0,0
+"134","MW063","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","hybrid","hybrid",0,0,0,0,0,0,0,1,0,1
+"135","MW064","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"136","MW065","MW","Massachusetts","Similis",2012,"similis",NA,NA,"similis","faint hybrid","similis",NA,NA,NA,NA,0,0,NA,NA,0,0
+"137","MW066","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"138","MW067","MW","Massachusetts","Similis",2012,"similis","similis","similis","similis","similis","similis",0,0,0,0,0,0,0,0,0,0
+"139","PEC0819_011","PEC","Northern Long Island","Similis",2019,"similis","similis","similis","similis","simlis","similis",0,0,0,0,0,0,NA,NA,0,0
+"140","PEC0819_012","PEC","Northern Long Island","Similis",2019,"similis","similis","similis","hybrid",NA,"similis",0,0,0,0,0,1,NA,NA,0,0
+"141","PEC0819_013","PEC","Northern Long Island","Similis",2019,"similis","similis","unclear","similis","similis","hybrid",0,0,NA,NA,0,0,0,0,0,1
+"142","PT03","PT","Massachusetts","Solidissima",2012,"solidissima","solidissima","solidissima",NA,NA,NA,1,1,1,1,NA,NA,NA,NA,NA,NA
+"143","PT04","PT","Massachusetts","Solidissima",2012,"solidissima","solidissima","solidissima",NA,NA,NA,1,1,1,1,NA,NA,NA,NA,NA,NA
+"144","PT05","PT","Massachusetts","Solidissima",2012,"solidissima","solidissima","solidissima",NA,NA,NA,1,1,1,1,NA,NA,NA,NA,NA,NA
+"145","PT06","PT","Massachusetts","Solidissima",2012,"solidissima","solidissima","solidissima",NA,NA,NA,1,1,1,1,NA,NA,NA,NA,NA,NA
+"146","PT08","PT","Massachusetts","Solidissima",2012,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"147","PT10","PT","Massachusetts","Solidissima",2012,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"148","PT12","PT","Massachusetts","Solidissima",2012,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"149","PT16","PT","Massachusetts","Solidissima",2012,"solidissima","solidissima","solidissima","solidissima","solidissima","solidissima",1,1,1,1,1,1,1,1,1,1
+"150","PT18","PT","Massachusetts","Solidissima",2012,"solidissima","solidissima","solidissima","solidissima","hybrid","solidissima",1,1,1,1,1,1,0,1,1,1
+"151","PT19","PT","Massachusetts","Solidissima",2012,"solidissima","solidissima","solidissima","solidissima","solidissima","solidissima",1,1,1,1,1,1,1,1,1,1
+"152","PT20","PT","Massachusetts","Solidissima",2012,"solidissima","hybrid","solidissima","solidissima","similis","solidissima",0,1,1,1,1,1,0,0,1,1
+"153","SHN0819_115","SHN","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"154","SHN0819_116","SHN","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"155","SHN0819_117","SHN","Southern Long Island","Solidissima",2019,"solidissima",NA,NA,"solidissima","solidissima","solidissima",NA,NA,NA,NA,1,1,1,1,1,1
+"156","SHN0819_121","SHN","Southern Long Island","Solidissima",2019,"solidissima","similis","similis","solidissima","hybrid","solidissima",0,0,0,0,1,1,0,1,1,1
+"157","SHN0819_122","SHN","Southern Long Island","Solidissima",2019,"solidissima","hybrid","similis","solidissima","solidissima","solidissima",0,1,0,0,1,1,1,1,1,1
+"158","SHN0819_123","SHN","Southern Long Island","Solidissima",2019,"solidissima","hybrid","similis","solidissima","solidissima","solidissima",0,1,0,0,1,1,1,1,1,1
+"159","SHN0819_124","SHN","Southern Long Island","Solidissima",2019,"solidissima","solidissima","similis","solidissima","solidissima","solidissima",1,1,0,0,1,1,1,1,1,1
+"160","SHN0819_125","SHN","Southern Long Island","Solidissima",2019,"solidissima","hybrid","similis","solidissima","solidissima","solidissima",0,1,0,0,1,1,1,1,1,1
+"161","SHN0819_126","SHN","Southern Long Island","Solidissima",2019,"solidissima","solidissima","similis","solidissima","solidissima","solidissima",1,1,0,0,1,1,1,1,1,1
+"162","SHN0819_127","SHN","Southern Long Island","Solidissima",2019,"solidissima","solidissima","similis","solidissima","solidissima","solidissima",1,1,0,0,1,1,1,1,1,1
+"163","SHN0819_128","SHN","Southern Long Island","Solidissima",2019,"solidissima","solidissima","similis","solidissima","solidissima","solidissima",1,1,0,0,1,1,1,1,1,1
+"164","SHN0819_129","SHN","Southern Long Island","Solidissima",2019,"solidissima","unclear","similis","solidissima","solidissima","solidissima",NA,NA,0,0,1,1,1,1,1,1
+"165","SHN0819_130","SHN","Southern Long Island","Solidissima",2019,"solidissima","hybrid","similis",NA,"hybrid","solidissima",0,1,0,0,NA,NA,0,1,1,1
+"166","SHN0819_131","SHN","Southern Long Island","Solidissima",2019,"solidissima","hybrid","similis","solidissima","solidissima","solidissima",0,1,0,0,1,1,1,1,1,1
+"167","SHN0819_132","SHN","Southern Long Island","Solidissima",2019,"solidissima","hybrid","similis","solidissima","solidissima","solidissima",0,1,0,0,1,1,1,1,1,1
+"168","SHN0819_133","SHN","Southern Long Island","Solidissima",2018,"solidissima","solidissima","similis","similis","solidissima","solidissima",1,1,0,0,0,0,1,1,1,1
+"169","TEST0819_009","TEST","Northern Long Island","Similis",2019,"similis",NA,NA,"hybrid",NA,"similis",NA,NA,NA,NA,0,1,NA,NA,0,0
+"170","TEST0819_010","TEST","Northern Long Island","Similis",2019,"similis",NA,NA,"solidissima",NA,"solidissima",NA,NA,NA,NA,1,1,NA,NA,1,1

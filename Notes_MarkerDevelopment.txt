@@ -250,17 +250,10 @@ while read candidate; do
 echo $candidate
 primernum=$(echo "$candidate" | grep -Eo '[0-9]+$') 
 primercandidate=$(echo "${candidate%?}" | tr -d '[:space:]')
-#echo $primercandidate
-grep "PRIMER_.*_$primernum" primer_attempts/primer_$primercandidate.output 
-done < CANDIDATES.txt
-#Where CANDIDATES.txt is a two column list of $isoform	$primer number
-
-
-
-
-
-
-
+echo $primercandidate
+grep "PRIMER_.*_$primernum" primer_attempts/primer_TRINITY_$primercandidate.output 
+done < CANDIDATES.txt  > feb_23_primers_out.txt
+#Where CANDIDATES.txt is a two column list of $isoform	$primer number - this is the input
 
 
 
@@ -272,6 +265,24 @@ done < CANDIDATES.txt
 
 
 ########################################### NOTES ####################################
+#Date: Feb 22 2021
+#Sort by size
+#NOPE: [Test from 850 to 1167]
+# Getting new weird line: Looks as fasta file snippet, the sequence TRINITY_DN10732_c0_g1_i7 starts at position 2793
+#  Right before the "found ____ SNPS line"
+#       And then it is also reporting mulitple times for the same sequence with different numbers of SNPs <- that's fine it should print it for each primer pair it tries that works.
+#   But then it looks like I have a chunk of stuff from the 4000s area.
+#	Where are my primers from?
+#    September: 0-600   October: 700-1800
+# Instead Pull 2000-3000 and 5000-6000
+#First put other ones in the bin. Done.
+#Date: Feb 23 2021
+# Remember to move all other ones to a folder that have been checked FIRST
+# 6000-8250
+
+# Candidates to pull primers
+
+
 #Date: August 9 2020
 #PRIMER3 and CALLING RFLP
 #It sounds like I may need to identify the primer areas first and then check for rflp
@@ -795,7 +806,7 @@ sed 's/=/\t/g' Oct2_eve_primer_out.txt > primer_tabbed2.txt
 
 
 
-#Date: October 3rd
+#Date: October 3rd 2020
 #New method: align by longer contigs now that I'm only looking for 4 enzymes
 
 #650 to 700 by size

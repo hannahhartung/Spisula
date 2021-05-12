@@ -3,6 +3,8 @@ Quantifying Mollusc Kit Digestion Gels
 
 ## Tidy Data
 
+Jan 14 2021
+
 ``` r
 library(dplyr)
 library(ggplot2)
