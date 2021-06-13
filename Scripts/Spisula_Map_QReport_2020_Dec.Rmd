@@ -318,6 +318,42 @@ tm_shape(us_states, bbox=eastcoast) + tm_fill(alpha = 0) +
 
 
 ```
+```{r isoclineonlymap}
+eastcoast=st_bbox(c(xmin = -85, xmax = -65,
+                      ymin = 30, ymax = 45)) %>% st_as_sfc()
+
+#Redo maps with grey land and white ocean
+
+longcoast=st_bbox(c(xmin = -82, xmax = -66,
+                      ymin = 25, ymax = 48)) %>% st_as_sfc()
+
+tm_shape(us_states, bbox=longcoast) + tm_fill(alpha = 0) +
+  tm_graticules(col = "grey80", lwd = 0.7) +
+  #tm_shape(bary_us, bbox=eastcoast) + tm_lines(col = "grey30", lwd = 1) +
+  tm_shape(world, bbox=longcoast) +
+  tm_fill(col = "grey89") +
+  tm_shape(us_states, bbox=longcoast) +
+  tm_fill(col = "grey89") + tm_borders(col="grey30") + tm_layout(bg.color = "white") +
+  tm_shape(bary_us, bbox=longcoast) + tm_lines(col = "grey30", lwd = 1) #+
+  #tm_shape(spissites) +  
+  #tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "-Set2", border.col = "grey30")
+
+ma=st_bbox(c(xmin = -75, xmax = -69.5,
+                      ymin = 40, ymax = 42.5)) %>% st_as_sfc()
+tm_shape(us_states, bbox=ma) + tm_fill(alpha = 0) +
+  tm_graticules(col = "grey80", lwd = 0.7) +
+  #tm_shape(bary_us, bbox=eastcoast) + tm_lines(col = "grey30", lwd = 1) +
+  tm_shape(world, bbox=ma) +
+  tm_fill(col = "grey89") +
+  tm_shape(us_states, bbox=ma) +
+  tm_fill(col = "grey89") + tm_borders(col="grey30") + tm_layout(bg.color = "white") +
+  tm_shape(bary_us, bbox=ma) + tm_lines(col = "grey30", lwd = 1) +
+  tm_shape(spissites) +  
+  tm_symbols(size = 0.2, jitter=0.05,col = "Species",  palette = "-Set2", border.col = "grey30")
+```
+
+
+
 ### For internal use: add site names to map
 ```{r names}
 #for visibility, crop to only the northeast
