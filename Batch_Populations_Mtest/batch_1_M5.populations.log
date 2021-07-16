@@ -1,0 +1,87 @@
+/programs/stacks/bin/populations -P stacks.M5 -O stacks.M5/populations.r80 -t 24 -r 0.80
+/programs/stacks/bin/populations version 1.48 executed 2021-07-16 07:26:34
+
+# Distribution of population loci.
+# Distribution of valid loci matched to catalog locus.
+# Valid samples at locus	Count
+1	55954
+2	18081
+3	10104
+4	6362
+5	4755
+6	3626
+7	3082
+8	2710
+9	2382
+10	2285
+11	2339
+12	2701
+13	5389
+# Distribution of confounded loci at catalog locus.
+# Confounded samples at locus	Count
+0	118189
+1	1078
+2	270
+3	128
+4	55
+5	20
+6	13
+7	8
+8	3
+9	4
+11	2
+# Distribution of missing loci at catalog loci.
+# Absent samples at locus	Count
+0	118189
+1	1078
+2	270
+3	128
+4	55
+5	20
+6	13
+7	8
+8	3
+9	4
+11	2
+# Distribution of population loci after applying locus constraints.
+# Distribution of valid loci matched to catalog locus.
+# Valid samples at locus	Count
+11	2339
+12	2701
+13	5389
+# Distribution of confounded loci at catalog locus.
+# Confounded samples at locus	Count
+0	10015
+1	340
+2	74
+# Distribution of missing loci at catalog loci.
+# Absent samples at locus	Count
+0	10015
+1	340
+2	74
+Population defaultpop contained 1243 incompatible loci -- more than two alleles present.
+Population defaultpop contained 0 incompatible loci -- more than two alleles present.
+# Distribution of the number of SNPs per locus.
+#n_snps	n_loci
+0	889
+1	1316
+2	1437
+3	1349
+4	1224
+5	1170
+6	905
+7	688
+8	519
+9	354
+10	195
+11	138
+12	102
+13	52
+14	29
+15	16
+16	8
+17	5
+18	5
+19	3
+20	0
+21	2

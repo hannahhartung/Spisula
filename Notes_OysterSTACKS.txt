@@ -1,0 +1,163 @@
+### STACKS WITH OYSTER DATA DENOVO PRACTICE
+
+### GOALS AND STEPS (to be fleshed out)
+# Feed oyster reads (cleaned) to Stacks
+# Output desired is likely a vcf file
+# Turn a vcf file into a PCA plot and determine other useful/interesting analyses
+
+#NYC WGS = whole genome?, then there is also NYC_clean_89bp < with ~20 per sample?
+#Reminder of what each sample was?
+
+#NYC GBS fastq raw data:
+#clean data post-filtering: mph75_0001 --> shared --> NYC_clean_89bp_gz
+#population samples include everything except
+#GRV (these are hatchery produced cohorts put out in cages at SV and HH)
+#FIS and FI are aquaculture samples
+#“a” in names stands for adult, “s” for spat
+#number refers to year of collection
+#R1 indicates that these are single-end data, not paired end
+#Do you want to see the MS thesis describing analysis of these data using STACKS?
+#Learning how to filter raw data for quality control and define loci is a big job by itself. You can start there if you want (I would give you the raw raw data), but with these fastq files you can jump right into population structure analyses.
+
+cp  NYC_clean_89bp_gz/*/*.fq.gz /workdir/hh693/oyster_test/reads
+
+#STACKS
+#Version 1 or version 2?
+#Stacks 2 for paired end so not now but later
+
+#Stacks executables are located in the directory /programs/stacks/bin, accessible on all BioHPC Lab machines.To launch these executables, please use the full path, e.g.,
+/programs/stacks/bin/ref_map.pl [options]
+/programs/stacks/bin/denovo_map.pl [options]
+/programs/stacks/bin/rxstacks [options]
+
+#If I want to "run without internet" or a docker then there are some instructions for that also on the biohpc site
+
+#The PROCEDURE comprises five main parts: 
+#https://www.nature.com/articles/nprot.2017.123
+		#(i) preparation of the environment and of the data; 
+		#(ii) demultiplexing and filtering of raw reads; 
+		#(iii) application of the pipeline to a small test subset to make sure that it works properly, and that the chosen approach and parameters are appropriate; 
+		#(iv) application of the pipeline to the complete data set; and 
+		#(v) export for downstream biological analyses. 
+#And otherthan maybe some (i), I'm at (iii) however, I can maybe use their filtering recommendations later
+
+#Date: July 15th
+#There is definitely some stuff in the earlier steps I'm not doing right now, and just choosing a dozen samples at random for my subset
+#From here going straight on: https://www.nature.com/articles/nprot.2017.123#Sec12
+
+touch popmap.test_samples.tsv
+nano popmap.test_samples.tsv
+# Formatted like <sample name>TAB<population name>
+SV0512a_024.R1	SV
+SV1013a_003.R1	SV
+AB812s_012.R1	AB
+AB812s_019.R1	AB
+HH812s_040.R1  HH
+HH812s_025.R1	HH
+SV812s_052.R1	SV
+AB812s_011.R1	AB
+HH0512a_020.R1	HH
+SV1013a_007.R1	SV
+SV912s_007.R1	SV
+HH1013a_023.R1	HH
+AB812s_015.R1	AB
+#Copied into cleaned directory
+#From file size variable from 500MB to 175
+# Not sure if there are meant to be enters in the filee but if not, what the heck?
+
+#Decide on a series of combinations of de novo RAD locus assembly parameters to examine. The main parameters to con sider are M, n, and m (see Box 2 for a discussion of these parameters and advice on how to choose reasonable values). 
+	#We recommend investigating a range of parameter values, and a good point to start is a range of M and n values from 1 to 9 (fixing M = n) and m = 3
+
+popmap=../info/popmap.test_samples.tsv
+reads_dir=../cleaned
+M=4
+out_dir=stacks.M$M
+log_file=$out_dir/denovo_map.oe
+/programs/stacks/bin/denovo_map.pl --samples $reads_dir -T 2 -O $popmap -o $out_dir -M $M -n $M -m 3 -b 1 -S &> $log_file
+#Error, unknown command line option 1 when -M $M and M=1, so I tried replacing it with actual numbers and something different happened? 
+#It does now seem to be running but why didn't it work before?
+#Seems to be working with the M4 test, maybe there was just a tab/space issue that retyping it fixed.
+
+#1:26pm it'sa runnin!
+
+#Do this once with M=1, then do it with M=2 though 9 as a loop
+#Run on 20 threads?
+#Try running once and then try running in slurm
+
+#The -T option can be used to make the pipeline run faster if multiple processors are available.
+
+#Check that it does not mention any error. The following command is a generic command to find errors (if any) in log files:
+grep -iE "\b(err|e:|warn|w:|fail|abort)" stacks.M1/denovo_map.log
+
+
+#2:03pm
+#I checked the log files and got several of these
+Warning: different sequence lengths detected, this will interfere with Stacks algorithms.
+#This error is not listed under the troubleshooting table in the paper and therefore I suspect that it is maybe an artifact of the fact that these were cleaned with a different method. 
+#Although does 89bp in the folder name mean that they should all be the same?
+
+#Anyway, I am going to proceed with trying to do this with slurm.
+sbatch --nodes=1 --ntasks=20 slurm_teststacks1.sh
+#It is still live in 
+squeue
+#It just moves at a weird cpu pace maybe?
+
+#Date: July 16th
+#The M series test finished running at 9pm after about 7 hours
+
+grep -iE "\b(err|e:|warn|w:|fail|abort)" stacks.M*/denovo_map.log
+#All log files show the same different sequence length warnings but no errors.
+
+
+#Now I assume I need to select the right parameters for me going forward
+	#Note the per-sample coverage values for M = 1. 
+	#These values are reported in the same log file as above. 
+	#They provide a lower bound for coverage—at M = 1, 
+	#coverage is underestimated because many heterozygous loci will be counted as two separate loci and the number of loci is artifactually inflated
+
+	#Coverage strongly affects the quality of genotype calls (see INTRODUCTION and Fig. 1). 
+	#In low-coverage data sets, the missing data and error rates can increase greatly; the experimenter should also be particularly cautious in his/her choice of model and filters for genotype calls. 
+	#In the rest of the protocol we assume that the coverage is at least 10×. 
+	#If your coverage is <10× for multiple samples, genotypes may be unreliable and can remain biased even after filtering.
+
+	#Having difficulty locating the stat
+	 Min depth of coverage to create a stack: 3 #? but that's just the m parameter I think
+	 
+	 
+	 #Depths of Coverage for Processed Samples:
+	SV0512a_024.R1: 158.249x
+	SV1013a_003.R1: 120.526x
+	AB812s_012.R1: 121.879x
+	AB812s_019.R1: 118.874x
+	HH812s_040.R1: 126.715x
+	HH812s_025.R1: 120.538x
+	SV812s_052.R1: 102.417x
+	AB812s_011.R1: 101.889x
+	HH0512a_020.R1: 90.3768x
+	SV1013a_007.R1: 93.528x
+	SV912s_007.R1: 104.686x
+	HH1013a_023.R1: 81.1903x
+	AB812s_015.R1: 63.2681x
+	#Got 'em, and all >10x
+	
+#For each parameter calculation filter the raw results of the pipeline using the populations unit,
+#keeping only loci shared by at least 80% of samples
+#Do your own separate for loop to make the directories and then do the actual slurm script
+mkdir $stacks_dir/populations.r80
+
+
+
+M=1
+stacks_dir=stacks.M$M
+out_dir=$stacks_dir/populations.r80
+log_file=$out_dir/populations.oe
+/programs/stacks/bin/populations -P $stacks_dir -O $out_dir -T 24 -r 0.80 &> $log_file
+#Put into for loop slurm
+#Should probably add threads thing but I feel like this might be a short run
+#Remember to do full path for all stacks programs
+
+sbatch --nodes=1 --ntasks=24 slurm_locishared80_test1.sh
+
+
+
+

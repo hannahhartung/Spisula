@@ -1,0 +1,263 @@
+# June 12th
+# Preparing nice transcriptomes and annotating them
+# To engage BBEdit colors, at the bottom of the window select Unix Shell Script as the file type.
+
+
+
+#### TRIM ####
+# I trimmed them using this code
+
+export PATH=/programs/bbmap-38.73:$PATH
+
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "$SAMPLE"
+	bbduk.sh in1=$SAMPLE'_R1.fastq.gz' in2=$SAMPLE'_R2.fastq.gz' out1=$SAMPLE'_clean_R1.fastq.gz' out2=$SAMPLE'_clean_R2.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& $SAMPLE'_bbmap.log'
+done
+
+#Pieces I want:
+#Adapter trimming
+#	ktrim=r k=23 mink=11 hdist=1 tpe tbo
+#Mapping Quality
+#	maq=10
+#Minimum Length (maybe)
+#	qtrim=r trimq=10 minlen=50
+#Histogram Generate (maybe)
+#	bhist=bhist.txt qhist=qhist.txt gchist=gchist.txt aqhist=aqhist.txt lhist=lhist.txt gcbins=auto
+#Trims about 0.5% of bases/reads - could be more stringent but it works and is eliminating without 
+
+
+
+#### TRINITY ####
+# I redid to make sure I used the exact same criteria for both
+# From SpisulaTrinity.sh
+
+#!/bin/bash
+
+TRINITY_HOME=/programs/trinityrnaseq-v2.10.0
+TRINITY_OUT=./trinity_sol_out
+
+#However, check for updates to each of these:
+#It says run this once per session
+export PATH=/programs/jellyfish-2.3.0/bin:$PATH
+export PATH=/programs/salmon-1.4.0/bin:$PATH
+export PATH=/programs/bowtie2-2.4.3-linux-x86_64:$PATH
+export TRINITY_HOME=/programs/trinityrnaseq-v2.10.0/
+export LD_LIBRARY_PATH=/usr/local/gcc-7.3.0/lib64:/usr/local/gcc-7.3.0/lib
+#Try with most updated but if it does not work go back to old versions
+ 
+#Note: If copy-pasting you cannot use the comment lines, go around them
+
+$TRINITY_HOME/Trinity --seqType fq \
+#Similis
+#--left Sim4_clean_R1.fastq.gz,Sim5_clean_R1.fastq.gz,Sim6_clean_R1.fastq.gz \
+#--right Sim4_clean_R2.fastq.gz,Sim5_clean_R2.fastq.gz,Sim6_clean_R2.fastq.gz \
+#Solidissima
+--left Sol8_clean_R1.fastq.gz,Sol7_clean_R1.fastq.gz,Sol6_clean_R1.fastq.gz,Sol10_clean_R1.fastq.gz \
+--right Sol8_clean_R2.fastq.gz,Sol7_clean_R2.fastq.gz,Sol6_clean_R2.fastq.gz,Sol10_clean_R1.fastq.gz \
+--SS_lib_type RF \
+--max_memory 100G  \
+--trimmomatic \
+--CPU 20 \
+--output $TRINITY_OUT
+
+#Including the Trimmomatic stage here as well (by default) removed less than 0.01% of reads.
+#June 13th, it looks like Solidissima got caught up after crysalis, try again with no trimmomatic setting
+		#Ran both yesterday with max_mem 2G but I could do more like 100G
+		#20 CPU and 100G memory each today and no trimmomatic. Start from empty directory for both
+#Run as scripts to save good log file
+#Must remove comment lines in script also
+
+chmod u+x Trinity_sol4_script.sh		
+chmod u+x Trinity_sim4_script.sh	
+
+nohup ./Trinity_sol_script.sh >& logs2021/Trinity_sol_june13c.log &
+nohup ./Trinity_sim_script.sh >& logs2021/Trinity_sim_june13c.log &
+		
+		#If it fails at butterfly, restart with fresh log but otherwise the same code
+		#Failing really early, try adding trimmomatic back
+		#Failed into crysalis - just repeat (c failed, into run attempt d)
+			#Sol didn't make it through inchworm
+#Nevermind, let's try with the old version numbers
+
+
+
+TRINITY_HOME=/programs/trinityrnaseq-v2.8.6
+TRINITY_OUT=./trinity_sol4_out
+export PATH=/programs/jellyfish-2.2.3/bin:$PATH
+export PATH=/programs/salmon-0.11.3/bin:$PATH
+export PATH=/programs/bowtie2-2.3.4.3:$PATH
+$TRINITY_HOME/Trinity --seqType fq \
+--left Sol8_clean_R1.fastq.gz,Sol7_clean_R1.fastq.gz,Sol6_clean_R1.fastq.gz,Sol10_clean_R1.fastq.gz \
+--right Sol8_clean_R2.fastq.gz,Sol7_clean_R2.fastq.gz,Sol6_clean_R2.fastq.gz,Sol10_clean_R1.fastq.gz \
+--SS_lib_type RF \
+--max_memory 80G  \
+--CPU 22 \
+--output $TRINITY_OUT
+
+chmod u+x Trinity_sol4_script.sh		
+chmod u+x Trinity_sim4_script.sh	
+
+nohup ./Trinity_sol4_script.sh >& logs2021/Trinity_sol_june13d.log &
+nohup ./Trinity_sim4_script.sh >& logs2021/Trinity_sim_june13d.log &
+		
+
+#Similis
+#--left Sim4_clean_R1.fastq.gz,Sim5_clean_R1.fastq.gz,Sim6_clean_R1.fastq.gz \
+#--right Sim4_clean_R2.fastq.gz,Sim5_clean_R2.fastq.gz,Sim6_clean_R2.fastq.gz \
+#Solidissima
+#--left Sol8_clean_R1.fastq.gz,Sol7_clean_R1.fastq.gz,Sol6_clean_R1.fastq.gz,Sol10_clean_R1.fastq.gz \
+#--right Sol8_clean_R2.fastq.gz,Sol7_clean_R2.fastq.gz,Sol6_clean_R2.fastq.gz,Sol10_clean_R1.fastq.gz \
+
+#June 14th 2021, still running, run tail log tells you the % through butterfly and after about 20 hours,
+		#its about 50% though butterfly on one and 30% through on the other.
+		#Around 25 hours, its about 79% and 56%
+#Produced 
+359M Jun 15 07:57 Trinity_sim.fasta
+398M Jun 15 07:57 Trinity_sol.fasta
+
+
+
+#### CLEAN TRIINITY AND QA ####
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############# Other Servers - Old Transcriptomes ##################
+
+#Try on other servers to work with the next steps with old transcriptomes
+
+
+#### CLEAN TRIINITY AND QA ####
+#June 14th, attempt with old Transdecoded transcriptomes
+		#Include -single_best_orf command in transdecoder
+#First re-find longest insoforms. So remember the process:
+
+grep ">" Transd_Similis.fasta > sequenceheader_sim &
+grep ">" Transd_Solidissima.fasta > sequenceheader_sol
+#Tried this also with the fresh Trinity ones rather than the transdecoder and those are
+#definitely the ones that I used before as the transd ones looked like the only had 
+#one isoform anyway?
+#But if you want to help something be comma separated:
+#spaces to commas
+sed 's/[\t ]/,/g' input > output.csv
+#equals signs and underscores
+sed 's/_/,/g' input | sed 's/=/,/g' > output.csv
+sed 's/[\t ]/,/g' sol2.csv | sed 's/_/,/g' | sed 's/=/,/g' > sol3.csv
+
+# open sequenceheader_Sol in excel
+# replace len= with nothing
+# replace > with nothing
+
+#Insert cell
+=CONCATENATE("TRINITY_",B1,"_",C1,"_",D1)
+#Sort by name A-Z then length Long to short
+#Then Data > Remove duplicates on just the column without the isoform
+
+
+# copy the isoform name and length into the map excel <not sure what that means
+# make sure isoforms map
+# then data > sort, column A (gene) A to Z, column C (length) Largest to Smallest
+# all columns and remove duplicates from column A
+# save just the list of isoforms as a .txt
+
+
+#If it saves with a bunch of extra lines at the end
+awk 'NF' LongestIsosim3.txt #removes blank lines
+
+makeblastdb -in Trinity_Similis.fasta -dbtype nucl -parse_seqids
+blastdbcmd -db Trinity_Similis.fasta -entry_batch LongestIsosim3.txt -out Trinity_longiso.fasta
+makeblastdb -in Trinity_Solidissima.fasta -dbtype nucl -parse_seqids
+blastdbcmd -db Trinity_Solidissima.fasta -entry_batch LongestIsosol3.txt -out Trinity_Solidissima_longiso.fasta
+
+#Now I can probably apply the same filtering to the transdecoder ones?
+#No! creating the databade failed because there are "Error: Duplicate seq_ids are found:"
+makeblastdb -in Transd_Similis.fasta -dbtype nucl -parse_seqids
+blastdbcmd -db Transd_Similis.fasta -entry_batch LongestIsosim3.txt -out Transd_Similis_longiso.fasta
+makeblastdb -in Transd_Solidissima.fasta -dbtype nucl -parse_seqids
+blastdbcmd -db Transd_Solidissima.fasta -entry_batch LongestIsosol3.txt -out Transd_Solidissima_longiso.fasta
+#So I think we have some relearning of transdecoder to do
+
+
+#Assuming I just start with my longest iso transcriptomes, what do I do next for gene ontology?
+cp /shared_data/genome_db/BLAST_NCBI/nr* ./
+cp /shared_data/genome_db/BLAST_NCBI/swissprot* ./
+#Using blast version 2.9.0 (latest), already in my PATH
+
+#I am doing blastx for Nucleotide to Protien
+blastn -db nt -query nt.fsa -out results.out
+blastx -db nr -query Trinity_Similis_longiso.fasta -task blastx-fast -out ./blast_out/similis_a.out
+#just playing around the blastx-fast
+#copying the nr database takes forever
+
+#run tests on multiple threads
+blastx -db nrtest/nr -query Trinity_Similis_longiso.fasta -num_threads 10 -task blastx-fast -out ./blast_out/similis_a.out &
+blastx -db nrtest/nr -query Trinity_Solidissima_longiso.fasta -num_threads 10 -task blastx-fast -out ./blast_out/solidissima_a.out &
+#nrtest was to see if you could put the database in a subfolder and you can
+#Takes >2 but <4 hours
+#Outputs results by contig
+
+#Now what do I do with them? Plus, consider the types of output. By default it is human readable.
+	#Compare which are shared across both vs those that are only in one of them, then compare the sequence of the ones that are in both.
+	#Can you convert human readable to one of the other kinds?
+	#A lot of the things that it blasted to are just predicted or copies of the same thing in different species.
+#Should I have filtered by orthologs first? Or homologs or whatnot
+	#Orthologs are genes in different species that evolved from a common ancestral gene by speciation, and, in general, orthologs retain the same function during the course of evolution. 
+	#A homologous gene (or homolog) is a gene inherited in two species by a common ancestor. While homologous genes can be similar in sequence, similar sequences are not necessarily homologous. Orthologous are homologous genes where a gene diverges after a speciation event, but the gene and its main function are conserved.
+
+#Experiment with outfmt 6 and another database
+blastx -db swissprot -query Trinity_Similis_longiso.fasta -num_threads 10 -outfmt 6 -task blastx-fast -out ./blast_out/similis_swiss6.out &
+blastx -db swissprot -query Trinity_Solidissima_longiso.fasta -num_threads 10 -outfmt 6 -task blastx-fast -out ./blast_out/solidissima_swiss6.out &
+sed 's/[\t ]/,/g' similis_swiss6.out > swisstest.csv
+#Outfmt 6
+#1.  qseqid      query (e.g., unknown gene) sequence id
+#2.  sseqid      subject (e.g., reference genome) sequence id
+#3.  pident      percentage of identical matches
+#4.  length      alignment length (sequence overlap)
+#5.  mismatch    number of mismatches
+#6.  gapopen     number of gap openings
+#7.  qstart      start of alignment in query
+#8.  qend        end of alignment in query
+#9.  sstart      start of alignment in subject
+#10.  send        end of alignment in subject
+#11.  evalue      expect value
+#12.  bitscore    bit score
+
+#By default e value is set to 10, which means 10 matches can be found by random chance. I should set it to be -evalue 1e-10
+#set b
+
+#test slurm for these
+
+blastx -db nrtest/nr -query Trinity_Similis_longiso.fasta -num_threads 5 -outfmt 6 -evalue 1e-10 -task blastx-fast -out ./blast_out/similis_b6.out &
+blastx -db nrtest/nr -query Trinity_Solidissima_longiso.fasta -num_threads 5 -outfmt 6 -evalue 1e-10 -task blastx-fast -out ./blast_out/solidissima_b6.out &
+blastx -db swissprot -query Trinity_Similis_longiso.fasta -num_threads 5 -outfmt 6 -evalue 1e-10 -task blastx-fast -out ./blast_out/similis_bswiss6.out &
+blastx -db swissprot -query Trinity_Solidissima_longiso.fasta -num_threads 5 -outfmt 6 -evalue 1e-10 -task blastx-fast -out ./blast_out/solidissima_bswiss6.out &
+
+#Instead, either write everything in a script that you submit using sbatch, or request an interactive session using salloc.
+#Also this might not work on the general server and might only on the actual Hare lab server
+sbatch --nodes=1 --ntasks=20 --mem=40000 slurmtest_blastx_b.sh
+#mem is in MB be default so 4000 MB = 4 GB
+#Warning: can't run 4 processes on 20 nodes, setting nnodes to 4
+#Should I just not set it? How do I run things on multiple cores, especially if I only have one task.
+		#I bet there's a difference between nodes and cores. > There is, each node contains 2ish cores. So, again, how do I use multiple?
+#Cancle slurm run and add in this one with node=1 because we only have one, whereas ntasks=threads
+squeue #to view current
+scancel ____ #to cancle by job number
+#Aki's slurm write-up
+https://github.com/therkildsen-lab/user-guide/blob/master/slurm_tutorial/slurm.md		
+#3:50 pm 14th, try setting it with out a mem requirement
+sbatch --nodes=1 --ntasks=20 slurmtest_blastx_b.sh
+#did not work
+
+
