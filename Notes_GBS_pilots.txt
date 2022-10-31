@@ -1,0 +1,489 @@
+#GBS
+
+#DOWNLOAD PILOT DATA
+#Date: June 26 2020
+wget -nH -np -N -r --cut-dirs 2 --no-check-certificate --user hare --password Represent-Woolen-Opportunity-Absence-6 https://umgcdownload.msi.umn.edu/hare/200518_NB551498_0045_AH2NKMBGXF/Hare_Project_001
+
+#Date: June 29 2020
+#BBMAP
+SAMPLES=(
+    CUP_265
+    CUP_352
+    GA_007
+    GA_008
+    MCX_082
+    PEC_011
+    SHN_126
+    TEST_010
+)
+export PATH=/programs/bbmap-38.73:$PATH
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "$SAMPLE"
+	bbduk.sh in=$SAMPLE'_R1.fastq.gz' out=$SAMPLE'_clean_R1.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& $SAMPLE'_bbmap.log'
+done
+#Reduced size slightly but not too much
+
+
+#BWA ALIGN TO SOL REFERENCE
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+REFFASTA=Sol_ref.fa
+
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "bwa mem -t 8 -R '@RG\tID:${SAMPLE}\tSM:${SAMPLE}\tLB:${SAMPLE}\tPL:ILLUMINA' Sol_ref.fa ${SAMPLE}_clean_R1.fastq.gz | samtools view -Sb -@8 -o ${SAMPLE}_iso_output.bam -"
+done > j_GBS_bwa.txt
+
+parallel -j 3 < j_GBS_bwa.txt
+#less -S do not wrap lines
+
+#Check what percent mapped
+samtools flagstat CUP_265_iso_output.bam > CUP_265_flagstat.txt	&		58.69%
+samtools flagstat CUP_352_iso_output.bam > CUP_352_flagstat.txt &		57.88%
+samtools flagstat GA_007_iso_output.bam > GA_007_flagstat.txt &			58.67%
+samtools flagstat GA_008_iso_output.bam > GA_008_flagstat.txt &			58.43%
+samtools flagstat MCX_082_iso_output.bam > MCX_082_flagstat.txt &		57.89%
+samtools flagstat PEC_011_iso_output.bam > PEC_011_flagstat.txt &		43.25%
+samtools flagstat SHN_126_iso_output.bam > SHN_126_flagstat.txt &		55.46%
+samtools flagstat TEST_010_iso_output.bam > TEST_010_flagstat.txt &		60.94%
+
+#Date: Feb 2 2021
+#Map Pilot 2 Data to Transcriptome to compare
+cd /home/mph75_0001/shared/Hannah/Spisula/GBS
+cp /home/mph75_0001/shared/Hannah/Spisula/GBS/pilot_data/Hare_Project_002/*.gz /workdir/hh693
+cd /workdir/hh693
+
+SAMPLES=(
+    CTM-001_S4
+    CTM-002_S5
+    ELP-002_S6
+    GLD_001_S1
+    GLD_005_1x_S2
+    GLD_005_2x_S3
+    PPB-001_S7
+    PPB-002_S8
+)
+#Clean
+export PATH=/programs/bbmap-38.73:$PATH
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "$SAMPLE"
+	bbduk.sh in=$SAMPLE'_R1_001.fastq.gz' out=$SAMPLE'_clean_R1.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& logs_align/$SAMPLE'_bbmap.log'
+done
+
+#Align to reference
+TMP=/workdir/$USER/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+REFFASTA=Sol_ref.fa
+#Clean is taking too long, combine with the list here
+#for SAMPLE in "${SAMPLES[@]}"; do
+#	echo "echo $SAMPLE"
+#	echo "bbduk.sh in=$SAMPLE'_R1_001.fastq.gz' out=$SAMPLE'_clean_R1.fastq.gz' ref=/programs/bbmap-38.73/resources/adapters.fa maq=10 ktrim=r k=23 mink=11 hdist=1 tpe tbo >& logs_align/$SAMPLE'_bbmap.log'"
+#done > j_GBS_p2clean_bwa.txt
+
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "bwa mem -t 8 -R '@RG\tID:${SAMPLE}\tSM:${SAMPLE}\tLB:${SAMPLE}\tPL:ILLUMINA' Sol_ref.fa ${SAMPLE}_clean_R1.fastq.gz | samtools view -Sb -@8 -o ${SAMPLE}_iso_output.bam -"
+done > j_GBS_p2_bwa.txt
+
+#Append the bwa to the clean
+#cat j_GBS_p2clean_bwa.txt j_GBS_p2_bwa.txt > j_GBS_p2_align.txt
+
+screen
+parallel -j 1 < j_GBS_p2_bwa.txt
+
+#Date: Feb 2 2021
+#Align both Pilot's to mitochondrial
+#Mactra chinensis:  KJ754823
+#Prepare reference:
+TMP=/workdir/hh693/tmp
+GATKDIR=/programs/gatk-4.1.4.0
+export PATH=$GATKDIR:$PATH
+gatk CreateSequenceDictionary -R KJ754823_mito_ref.fa -O KJ754823_mito_ref.dict
+samtools faidx KJ754823_mito_ref.fa
+#Index for BWA alignment
+bwa index KJ754823_mito_ref.fa
+
+#Move clean fastas from pilot 1 to workdir
+cp /home/mph75_0001/shared/Hannah/Spisula/GBS/pilot_001_analysis/GBS_clean_reads/*clean* /workdir/hh693
+
+#Align both to mito
+SAMPLES=(
+    CUP_265
+    CUP_352
+    GA_007
+    GA_008
+    MCX_082
+    PEC_011
+    SHN_126
+    TEST_010
+    CTM-001_S4
+    CTM-002_S5
+    ELP-002_S6
+    GLD_001_S1
+    GLD_005_1x_S2
+    GLD_005_2x_S3
+    PPB-001_S7
+    PPB-002_S8
+)
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "bwa mem -t 4 -R '@RG\tID:${SAMPLE}\tSM:${SAMPLE}\tLB:${SAMPLE}\tPL:ILLUMINA' KJ754823_mito_ref.fa ${SAMPLE}_clean_R1.fastq.gz | samtools view -Sb -@4 -o mito_aligns/${SAMPLE}_mito_output.bam - >& logs_align/$SAMPLE'_bwa_mito.log"
+done > j_GBS_mito.txt
+screen
+parallel -j 4 < j_GBS_mito_wlog.txt
+
+
+#Date: Feb 3 2021
+mkdir align_stats
+#Check flagstats
+samtools flagstat CTM-001_S4_iso_output.bam  > align_stats/CTM-001_S4_flagstat.txt	&
+#Takes about 45 seconds
+less align_stats/CTM-001_S4_flagstat.txt    52.91%   mapped
+#This is a similis, the ones from last time were a mix.
+SAMPLES=(
+    CTM-001_S4
+    CTM-002_S5
+    ELP-002_S6
+    GLD_001_S1
+    GLD_005_1x_S2
+    GLD_005_2x_S3
+    PPB-001_S7
+    PPB-002_S8
+)
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo $SAMPLE
+	samtools flagstat mito_aligns/$SAMPLE'_mito_output.bam'  > align_stats/$SAMPLE'_mito_flagstat.txt'
+done
+
+
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo $SAMPLE
+	samtools flagstat $SAMPLE'_iso_output.bam'  > align_stats/$SAMPLE'_iso_flagstat.txt'
+done
+
+
+#Flagstat is not what we want, examine log files
+#Make sure you save the log files from the alignments (as opposed to clean logs)
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "bwa mem -t 8 -R '@RG\tID:${SAMPLE}\tSM:${SAMPLE}\tLB:${SAMPLE}\tPL:ILLUMINA' Sol_ref.fa ${SAMPLE}_clean_R1.fastq.gz 2> logs_align/$SAMPLE'_TEST_bwa.log' > ${SAMPLE}_iso_TEST_output.sam"
+done > j_GBS_p2_bwa_wlog_TEST.txt
+for SAMPLE in "${SAMPLES[@]}"; do
+	echo "echo $SAMPLE"
+	echo "echo 'convert to bam''"
+	echo "samtools view -Sb -@8 ${SAMPLE}_iso_TEST_output.sam -o ${SAMPLE}_iso_TEST_output.bam -"
+done >> j_GBS_p2_bwa_wlog_TEST.txt
+parallel -j 4 < j_GBS_p2_bwa_wlog_TEST.txt
+#This does not save log file.
+
+
+
+
+#Date: June 29 2020
+
+#What were the flagstats for the originals?
+#About 95%
+
+#Mark Duplicates
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+
+CUP_265_iso_output.bam
+MCX_082_iso_output.bam 
+CUP_352_iso_output.bam
+PEC_011_iso_output.bam  
+GA_007_iso_output.bam
+SHN_126_iso_output.bam
+TEST_010_iso_output.bam
+GA_008_iso_output.bam
+
+ACC=CUP_265
+REFFASTA=Sol_ref.fa
+gatk MarkDuplicatesSpark \
+-I ${ACC}_iso_output.bam \
+-O ${ACC}.sorted.dedup.bam \
+-M ${ACC}.sorted.dedup.txt \
+--tmp-dir $TMP \
+--conf "spark.executor.cores=8" \
+>& sortdedup_${ACC}.log &
+
+touch j_GBS_markdups_and_freebayes.txt
+
+for ACC in "${SAMPLES[@]}"; do
+	echo "gatk MarkDuplicatesSpark -I ${ACC}_iso_output.bam -O ${ACC}.sorted.dedup.bam -M ${ACC}.sorted.dedup.txt --tmp-dir $TMP --conf "spark.executor.cores=8" >& sortdedup_${ACC}.log"
+done
+
+gatk MarkDuplicatesSpark -I CUP_265_iso_output.bam -O CUP_265.sorted.dedup.bam -M CUP_265.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_CUP_265.log
+gatk MarkDuplicatesSpark -I CUP_352_iso_output.bam -O CUP_352.sorted.dedup.bam -M CUP_352.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_CUP_352.log
+gatk MarkDuplicatesSpark -I GA_007_iso_output.bam -O GA_007.sorted.dedup.bam -M GA_007.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_GA_007.log
+gatk MarkDuplicatesSpark -I GA_008_iso_output.bam -O GA_008.sorted.dedup.bam -M GA_008.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_GA_008.log
+gatk MarkDuplicatesSpark -I MCX_082_iso_output.bam -O MCX_082.sorted.dedup.bam -M MCX_082.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_MCX_082.log
+gatk MarkDuplicatesSpark -I PEC_011_iso_output.bam -O PEC_011.sorted.dedup.bam -M PEC_011.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_PEC_011.log
+gatk MarkDuplicatesSpark -I SHN_126_iso_output.bam -O SHN_126.sorted.dedup.bam -M SHN_126.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_SHN_126.log
+gatk MarkDuplicatesSpark -I TEST_010_iso_output.bam -O TEST_010.sorted.dedup.bam -M TEST_010.sorted.dedup.txt --tmp-dir /workdir/hh693/tmp --conf spark.executor.cores=8 >& sortdedup_TEST_010.log
+
+parallel -j 1 < j_GBS_markdups_and_freebayes.txt
+
+#Date: July 30 2020
+#I had an extra "\" in the line and it was too confused to run
+
+#FreeBayes
+screen
+export JAVA_HOME=/usr/local/jdk1.8.0_121
+export PATH=$JAVA_HOME/bin:$PATH
+GATKDIR=/programs/gatk-4.1.4.0
+TMP=/workdir/$USER/tmp
+export PATH=$GATKDIR:$PATH
+FB=/programs/freebayes-v1.3.1/freebayes
+$FB -f Sol_ref.fa CUP_265.sorted.dedup.bam CUP_352.sorted.dedup.bam MCX_082.sorted.dedup.bam PEC_011.sorted.dedup.bam GA_007.sorted.dedup.bam GA_008.sorted.dedup.bam SHN_126.sorted.dedup.bam TEST_010.sorted.dedup.bam --min-mapping-quality 30 > fb_pilot_GBS.vcf >& fb_GBS.log &
+
+
+#Date: July 31 2020
+#vcftools FST
+#calculate an Fst estimate from Weir and Cockerham’s 1984 paper
+touch GBS_samples.txt
+nano GBS_samples.txt
+CUP_265
+CUP_352
+GA_007
+GA_008
+MCX_082
+PEC_011
+SHN_126
+TEST_010
+
+vcftools --vcf fb_GBS_vcf/fb_pilot_GBS.vcf --weir-fst-pop GBS_samples.txt --out GBS_samples.fst
+#Did not work
+#Try with test vcf
+cp /shared_data/Variants_workshop_2019/premade_gvcf/*.g.vcf* .
+cp -r /shared_data/Variants_workshop_2019/genome . &
+cp -r /shared_data/Variants_workshop_2019/scripts . &
+nohup ./scripts/prepare_genome.sh >& prepare_genome.log &
+nohup ./scripts/combineGVCFs.sh >& combineGVCFs.log &
+nohup ./scripts/genotypeGVCFs.sh >& genotypeGVCFs.log &
+grep -v "##" all.vcf | less -S
+#Get sample list, when -f 10- means from 10th column on (or 9? - either way it works): where the samples start
+grep -m 1 "^#CHROM" all.vcf | cut -f 10- | tr "\t" "\n" > samplelist.txt
+
+vcftools --vcf all.vcf --weir-fst-pop samples1.txt --weir-fst-pop samples2.txt
+#Err: How alternate alleles are phased with reference to eachother
+#Try something else
+vcftools --vcf all.vcf --freq
+#Actually! The output is produced even with all the errors for both
+#But maybe it only output FST for when I compared two populations
+
+grep -m 1 "^#CHROM" fb_pilot_GBS.vcf| cut -f 10- | tr "\t" "\n" > samplelist.txt
+vcftools --vcf fb_pilot_GBS.vcf --weir-fst-pop samplelist.txt
+#Who are these individuals?
+#TEST_010		Sim
+#CUP_265		Sol
+#PEC_011		Sim
+#MCX_082		Sol
+#GA_007			Sim
+#SHN_126		Sol
+#CUP_352		Sol
+#GA_008			Sim
+
+vcftools --vcf fb_pilot_GBS.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt --out fb_take_two
+Weir and Cockerham mean Fst estimate: 0.075007
+Weir and Cockerham weighted Fst estimate: 0.1392
+
+#redo
+Weir and Cockerham mean Fst estimate: 0.075007
+Weir and Cockerham weighted Fst estimate: 0.1392
+After filtering, kept 264850 out of a possible 264850 Sites
+
+#Date: August 1 2020 
+#WARNINGS from VCFTOOLS - when trying to use all individuals as one pop
+Warning: Expected at least 2 parts in INFO entry: ID=AF,Number=A,Type=Float,Description="Estimated allele frequency in the range (0,1]">
+Warning: Expected at least 2 parts in INFO entry: ID=PRO,Number=1,Type=Float,Description="Reference allele observation count, with partial observations recorded fractionally">
+Warning: Expected at least 2 parts in INFO entry: ID=PAO,Number=A,Type=Float,Description="Alternate allele observations, with partial observations recorded fractionally">
+Warning: Expected at least 2 parts in INFO entry: ID=SRP,Number=1,Type=Float,Description="Strand balance probability for the reference allele: Phred-scaled upper-bounds estimate of the probability of observing the deviation between SRF and SRR given E(SRF/SRR) ~ 0.5, derived using Hoeffding's inequality">
+Warning: Expected at least 2 parts in INFO entry: ID=SAP,Number=A,Type=Float,Description="Strand balance probability for the alternate allele: Phred-scaled upper-bounds estimate of the probability of observing the deviation between SAF and SAR given E(SAF/SAR) ~ 0.5, derived using Hoeffding's inequality">
+Warning: Expected at least 2 parts in INFO entry: ID=AB,Number=A,Type=Float,Description="Allele balance at heterozygous sites: a number between 0 and 1 representing the ratio of reads showing the reference allele to all reads, considering only reads from individuals called as heterozygous">
+Warning: Expected at least 2 parts in INFO entry: ID=ABP,Number=A,Type=Float,Description="Allele balance probability at heterozygous sites: Phred-scaled upper-bounds estimate of the probability of observing the deviation between ABR and ABA given E(ABR/ABA) ~ 0.5, derived using Hoeffding's inequality">
+Warning: Expected at least 2 parts in INFO entry: ID=RPP,Number=A,Type=Float,Description="Read Placement Probability: Phred-scaled upper-bounds estimate of the probability of observing the deviation between RPL and RPR given E(RPL/RPR) ~ 0.5, derived using Hoeffding's inequality">
+Warning: Expected at least 2 parts in INFO entry: ID=RPPR,Number=1,Type=Float,Description="Read Placement Probability for reference observations: Phred-scaled upper-bounds estimate of the probability of observing the deviation between RPL and RPR given E(RPL/RPR) ~ 0.5, derived using Hoeffding's inequality">
+Warning: Expected at least 2 parts in INFO entry: ID=EPP,Number=A,Type=Float,Description="End Placement Probability: Phred-scaled upper-bounds estimate of the probability of observing the deviation between EL and ER given E(EL/ER) ~ 0.5, derived using Hoeffding's inequality">
+Warning: Expected at least 2 parts in INFO entry: ID=EPPR,Number=1,Type=Float,Description="End Placement Probability for reference observations: Phred-scaled upper-bounds estimate of the probability of observing the deviation between EL and ER given E(EL/ER) ~ 0.5, derived using Hoeffding's inequality">
+Warning: Expected at least 2 parts in INFO entry: ID=TYPE,Number=A,Type=String,Description="The type of allele, either snp, mnp, ins, del, or complex.">
+Warning: Expected at least 2 parts in INFO entry: ID=TYPE,Number=A,Type=String,Description="The type of allele, either snp, mnp, ins, del, or complex.">
+Warning: Expected at least 2 parts in INFO entry: ID=TYPE,Number=A,Type=String,Description="The type of allele, either snp, mnp, ins, del, or complex.">
+Warning: Expected at least 2 parts in INFO entry: ID=TYPE,Number=A,Type=String,Description="The type of allele, either snp, mnp, ins, del, or complex.">
+Warning: Expected at least 2 parts in INFO entry: ID=TYPE,Number=A,Type=String,Description="The type of allele, either snp, mnp, ins, del, or complex.">
+Warning: Expected at least 2 parts in INFO entry: ID=CIGAR,Number=A,Type=String,Description="The extended CIGAR representation of each alternate allele, with the exception that '=' is replaced by 'M' to ease VCF parsing.  Note that INDEL alleles do not have the first matched base (which is provided by default, per the spec) referred to by the CIGAR.">
+Warning: Expected at least 2 parts in FORMAT entry: ID=GQ,Number=1,Type=Float,Description="Genotype Quality, the Phred-scaled marginal (or unconditional) probability of the called genotype">
+Warning: Expected at least 2 parts in FORMAT entry: ID=GL,Number=G,Type=Float,Description="Genotype Likelihood, log10-scaled likelihoods of the data given the called genotype for each possible genotype generated from the reference and alternate alleles given the sample ploidy">
+Keeping individuals in 'keep' list
+After filtering, kept 8 out of 8 Individuals
+Require at least two populations to estimate Fst. Skipping
+After filtering, kept 0 out of a possible 0 Sites
+File does not contain any sites
+
+#August 3rd
+#Filter by no missing data
+#How many was it originally based on?
+82891
+#
+-g, --genotype [^][hom|het|miss]
+bcftools view -o fb_no_missing_GBS.vcf --genotype ^miss fb_pilot_GBS.vcf 
+include only sites with one or more homozygous (hom), heterozygous (het) or missing (miss) genotypes. When prefixed with ^, the logic is reversed; thus ^het excludes sites with heterozygous genotypes.
+
+#This would leave me to believe that the --weir-fst-pop already filtered by nonmissing
+82891
+#
+vcftools --vcf fb_no_missing_GBS.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt --out fb_no_missing
+Weir and Cockerham mean Fst estimate: 0.075007
+Weir and Cockerham weighted Fst estimate: 0.1392
+After filtering, kept 82890 out of a possible 82890 Sites
+
+
+#Date: August 8 2020
+#And realign them
+
+
+#Repeat Free Bayes contig by contig
+while read REGION; do
+  echo "echo $REGION"
+  echo "/programs/freebayes-v1.3.1/freebayes -f $REFFASTA bams/CUP_265.sorted.dedup.bam bams/CUP_352.sorted.dedup.bam bams/GA_007.sorted.dedup.bam bams/GA_008.sorted.dedup.bam bams/MCX_082.sorted.dedup.bam bams/PEC_011.sorted.dedup.bam bams/SHN_126.sorted.dedup.bam bams/TEST_010.sorted.dedup.bam --min-mapping-quality 30 -r $REGION > fb_GBS_vcf/fb_$REGION.vcf"
+done <chr_list.txt > j_fb_GBS_contig.txt
+
+REFFASTA=Sol_ref.fa
+REGION=TRINITY_DN0_c2_g1_i1
+TMP=/workdir/$USER/tmp
+FB=/programs/freebayes-v1.3.1/freebayes
+
+/programs/freebayes-v1.3.1/freebayes -f $REFFASTA bams/CUP_265.sorted.dedup.bam bams/CUP_352.sorted.dedup.bam bams/GA_007.sorted.dedup.bam bams/GA_008.sorted.dedup.bam bams/MCX_082.sorted.dedup.bam bams/PEC_011.sorted.dedup.bam bams/SHN_126.sorted.dedup.bam bams/TEST_010.sorted.dedup.bam --min-mapping-quality 30 -r $REGION > fb_GBS_vcf/fb_$REGION.vcf
+echo $REGION
+$FB -f $REFFASTA bams/Sim4.sd.bam bams/Sim5.sd.bam bams/Sim6.sd.bam bams/Sol6.sd.bam bams/Sol7.sd.bam bams/Sol8.sd.bam bams/Sol10.sd.bam --min-mapping-quality 30 -r $REGION > test_vcf/fb_$REGION.vcf
+
+parallel -j22 < j_fb_GBS_contig.txt
+
+#First do ten of them
+#Don't forget the \ around internal quotes
+for i in {0..9}
+do
+echo "echo $i"
+echo "touch output_DN$i.vcf"
+echo "grep \"#\" fb_GBS_vcf/fb_TRINITY_DN0_c2_g1_i1.vcf | cat >> output_DN$i.vcf"
+echo "grep -v \"#\" fb_GBS_vcf/fb_TRINITY_DN$i*.vcf | cat >> output_DN$i.vcf"
+done > j_combine_fb_vcf.txt
+
+screen
+parallel -j16 < j_combine_fb_vcf.txt
+
+#Checked to make sure they had all finished by doing tail -300+ to make sure there were 9s
+
+#All in one
+touch output_all.vcf
+grep \"#\" output_DN1.vcf | cat >> output_all.vcf
+grep -v \"#\" output_DN*.vcf | cat >> output_all.vcf
+
+#Date: August 18 2020
+#Filter pilot by no missing data
+#Base sites: 
+264851
+#Filtered
+bcftools filter --include 'COUNT(GT="mis")=0' pilot_unfiltered.vcf --output pilot_noMissing.vcf
+82891
+
+bcftools filter --include 'COUNT(GT="mis")=0' original_unfiltered.vcf --output original_noMissing.vcf
+bgzip original_noMissing.vcf &
+tabix original_noMissing.vcf.gz
+
+#Extract pilot contigs
+grep -v "#" pilot_unfiltered.vcf | awk 'BEGIN{FS=OFS="\t"}{print $1,$2}' > pilot_u_chr_list
+grep -v "#" pilot_noMissing.vcf| awk 'BEGIN{FS=OFS="\t"}{print $1,$2}' > pilot_noM_chr_list
+
+#Pull those contigs out of the originals
+bgzip original_unfiltered.vcf
+tabix original_unfiltered.vcf.gz
+bcftools view -R pilot_u_chr_list -o original_cross_u.vcf -O v original_unfiltered.vcf.gz &
+138275
+bcftools view -R pilot_noM_chr_list -o original_cross_noM.vcf -O v original_noMissing.vcf.gz &
+32374
+
+#Also filter the pilot data to only have the matching sites 
+grep -v "#" original_cross_u.vcf  | awk 'BEGIN{FS=OFS="\t"}{print $1,$2}' > match_u_chr_list
+grep -v "#" original_cross_noM.vcf | awk 'BEGIN{FS=OFS="\t"}{print $1,$2}' > match_noM_chr_list
+bgzip pilot_unfiltered.vcf &
+bgzip pilot_noMissing.vcf &
+tabix pilot_unfiltered.vcf.gz
+tabix pilot_noMissing.vcf.gz &
+bcftools view -R match_u_chr_list --include 'TYPE="snp"' -o pilot_cross_u.vcf -O v pilot_unfiltered.vcf.gz &
+bcftools view -R match_noM_chr_list --include 'TYPE="snp"' -o pilot_cross_noM.vcf -O v pilot_noMissing.vcf.gz &
+bcftools view -R match_u_chr_list --include 'TYPE="snp"' -o original_cross_u.vcf -O v original_unfiltered.vcf.gz &
+bcftools view -R match_noM_chr_list --include 'TYPE="snp"' -o original_cross_noM.vcf -O v original_noMissing.vcf.gz &
+
+#DO THIS WITH SNP ONLY
+
+
+
+#Do FST analysis on these.
+vcftools --vcf pilot_cross_u.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt --out pilot_cross_u
+Weir and Cockerham mean Fst estimate: 0.10224
+Weir and Cockerham weighted Fst estimate: 0.18433
+After filtering, kept 106932 out of a possible 106932 Sites
+vcftools --vcf original_cross_u.vcf --weir-fst-pop samplesSim1.txt --weir-fst-pop samplesSol1.txt --out original_u
+Weir and Cockerham mean Fst estimate: 0.23698
+Weir and Cockerham weighted Fst estimate: 0.36075
+After filtering, kept 130623 out of a possible 130623 Sites
+
+vcftools --vcf pilot_cross_noM.vcf --weir-fst-pop samplesSim.txt --weir-fst-pop samplesSol.txt --out pilot_cross_no_missing
+Weir and Cockerham mean Fst estimate: 0.098785
+Weir and Cockerham weighted Fst estimate: 0.19061
+After filtering, kept 18088 out of a possible 18088 Sites
+vcftools --vcf original_cross_noM.vcf --weir-fst-pop samplesSim1.txt --weir-fst-pop samplesSol1.txt --out original_cross_no_missing
+Weir and Cockerham mean Fst estimate: 0.14304
+Weir and Cockerham weighted Fst estimate: 0.24661
+After filtering, kept 19877 out of a possible 19877 Sites
+vcftools --vcf pilot_cross_noM.vcf --weir-fst-pop samplesSim_noPEC.txt --weir-fst-pop samplesSol.txt --out pilot_cross_no_missing
+Weir and Cockerham mean Fst estimate: 0.11385
+Weir and Cockerham weighted Fst estimate: 0.2118
+After filtering, kept 18088 out of a possible 18088 Sites
+
+
+#Why are these different numbers? The number of sites should be the same after cross ref twice.
+vcftools --vcf pilot_unfiltered.vcf --out pilot.missing.test.vcf --missing-indv &
+vcftools --vcf original_unfiltered.vcf --out original.missing.test.vcf --missing-indv &
+
+Sol10   2815704 0       231832  0.0823354
+Sim5    2815704 0       287434  0.102082
+Sol7    2815704 0       239953  0.0852195
+Sim4    2815704 0       180516  0.0641104
+Sim6    2815704 0       476204  0.169124
+Sol6    2815704 0       120372  0.0427502
+Sol8    2815704 0       231284  0.0821407
+
+INDV    N_DATA  N_GENOTYPES_FILTERED    N_MISS  F_MISS
+TEST    264850  0       82112   0.310032
+CUP_265 264850  0       85360   0.322296
+PEC_011 264850  0       104600  0.394941     
+MCX_082 264850  0       82110   0.310025
+GA_007  264850  0       79441   0.299947
+SHN_126 264850  0       84276   0.318203
+CUP_352 264850  0       88483   0.334087
+GA_008  264850  0       83516   0.315333
+Sol10   2815704 0       231832  0.0823354
+Sim5    2815704 0       287434  0.102082
+Sol7    2815704 0       239953  0.0852195
+Sim4    2815704 0       180516  0.0641104
+Sim6    2815704 0       476204  0.169124
+Sol6    2815704 0       120372  0.0427502
+Sol8    2815704 0       231284  0.0821407
+
+#PEC_011 is the "off" sample
+vcftools --vcf pilot_cross_u.vcf --weir-fst-pop samplesSim_noPEC.txt --weir-fst-pop samplesSol.txt --out pilot_cross_u
+Weir and Cockerham mean Fst estimate: 0.14842
+Weir and Cockerham weighted Fst estimate: 0.26017
+After filtering, kept 106932 out of a possible 106932 Sites
+vcftools --vcf pilot_cross_noM.vcf --weir-fst-pop samplesSim_noPEC.txt --weir-fst-pop samplesSol.txt --out pilot_cross_no_missing
+Weir and Cockerham mean Fst estimate: 0.11221
+Weir and Cockerham weighted Fst estimate: 0.19845
+After filtering, kept 23139 out of a possible 23139 Sites
+

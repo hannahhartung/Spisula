@@ -1,0 +1,212 @@
+#### FROM FILTERED DATA ####
+#	   BEGIN ANALYSES	   #
+
+#Sorts of analyses...
+	#LD
+	#Ne estimation
+	#Measures of Diversity
+	#FST (pairwise and otherwise)
+
+#Date: Nov 5th 2021
+#From filterDoc_1012/final_filter1012/noLD (meaning only one per radtag)
+	#Nucleotide diversity and heterozygosity
+vcftools --vcf SNP_JPfilter1012noLD.vcf --site-pi --out nucleotide_diversity
+vcftools --vcf SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --out nucleotide_diversity_simonly
+		#Gives nucleotide diversity at each locus
+		#Summarize by graphing with histogram
+			stats/nucleotide_diversity_simonly.sites.pi
+			stats/nucleotide_diversity.sites.pi
+		#Probably also average
+		
+		#Do while only keeping samples from each site? <- this could be good to do at any earlier filtering step before requiring stuff to be weird in 
+	#Population Nucleotide Diversity
+cd stats
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_GA.txt --out nd_GA
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_SCC.txt --out nd_SCC
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_NLI.txt --out nd_NLI
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_CTM.txt --out nd_CTM
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_ELP.txt --out nd_ELP
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_GLD.txt --out nd_GLD
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_MW.txt --out nd_MW
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_PEC.txt --out nd_PEC
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_PPB.txt --out nd_PPB
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_RP20.txt --out nd_RP20
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --site-pi --keep poplist_WFH.txt --out nd_WF
+		#Now I can take an average (or histogram) of each sample
+		#Move to excel for easy format?
+	
+	#Heterozygosity
+#--het
+#Calculates a measure of heterozygosity on a per-individual basis. Specfically, the inbreeding coefficient, F, is estimated for each individual using a method of moments. The resulting file has the suffix ".het".
+#--hardy
+#Reports a p-value for each site from a Hardy-Weinberg Equilibrium test (as defined by Wigginton, Cutler and Abecasis (2005)). The resulting file (with suffix ".hwe") also contains the Observed numbers of Homozygotes and Heterozygotes and the corresponding Expected numbers under HWE.
+	#Could also do this (but graph other things first)
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --het --out het_simonly
+		#confirm that does not change when looking at population level cause per indv?
+		#vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --het --keep poplist_CTM.txt --out temp
+		#nope, that's definitely different... why?
+	INDV    O(HOM)  E(HOM)  N_SITES F
+CTM_001 1102    1111.8  1296    -0.05346
+CTM_002 1098    1113.1  1298    -0.08151
+
+INDV    O(HOM)  E(HOM)  N_SITES F
+CTM_001 491     510.0   685     -0.10831
+CTM_002 486     510.4   686     -0.13884
+		#it did not say that it filtered non-varient sites (all loci retained)
+		#Maybe it did anyway though because it can't calculate it at non heterozugous sites. <- nope that's not right either, its looking at 0/0 and some of them are homozygous....?
+		
+	#Pairwise genomic FST
+mkdir stats
+cd stats
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf --weir-fst-pop poplist_NLI.txt \
+--weir-fst-pop poplist_SCC.txt --weir-fst-pop poplist_GA.txt \
+--out fst_simonly
+		#Require at least two populations to estimate Fst. Skipping #did not work?
+		#might require multiple files (one with the samples from each pop?) <- yup
+		#For old similis:
+					#Weir and Cockerham mean Fst estimate: 0.02348
+					#Weir and Cockerham weighted Fst estimate: 0.039953
+					#kept 130 out of 133 Individuals?
+		#This one's still got the dang BPL in it, okay where's the one without?
+		filterdDoc_1012sf/SNP_JPfilter1012sf_noLD_simonly.vcf #copied to here
+	Weir and Cockerham mean Fst estimate: 0.029318
+	Weir and Cockerham weighted Fst estimate: 0.043405
+	#Also has FST for each site reported - histogram? Less useful
+	#This did not do pairwise across all three
+	
+	#Similis only by population (no sneaky solidissima)
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf  --out fst_simonly_SCCGA \
+--weir-fst-pop poplist_SCC.txt --weir-fst-pop poplist_GA.txt
+		#GA to SCC
+		Weir and Cockerham mean Fst estimate: 0.026679
+		Weir and Cockerham weighted Fst estimate: 0.051799
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf  --out fst_simonly_SCCNLI \
+--weir-fst-pop poplist_SCC.txt --weir-fst-pop poplist_NLI.txt
+		#NLI to SCC
+		Weir and Cockerham mean Fst estimate: 0.015105
+		Weir and Cockerham weighted Fst estimate: 0.019999
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf  --out fst_simonly_GANLI \
+--weir-fst-pop poplist_GA.txt --weir-fst-pop poplist_NLI.txt
+		#GA to NLI
+		Weir and Cockerham mean Fst estimate: 0.039718
+		Weir and Cockerham weighted Fst estimate: 0.075005		
+	
+	#Similis only by site (no sneaky solidissima)
+vcftools --vcf ../SNP_JPfilter1012sf_noLD_simonly.vcf  --out fst_simonly_temp \
+--weir-fst-pop poplist_GA.txt --weir-fst-pop poplist_PPB.txt
+		#Saved into "important graphs excel document" for pairwise table
+
+
+
+
+
+	#Do with genomic dDocent results and then transcriptome vcf
+
+
+
+
+
+
+#Date: Oct 20th 2021
+#From filterDoc_1012
+
+
+#Ne estimation
+http://www.molecularfisherieslaboratory.com.au/neestimator-software/
+	#NeOGen is their tool for iteroparous species (which surf clams are but not dramatically so)
+	http://www.molecularfisherieslaboratory.com.au/download-software/
+#Run Ne2-1M
+	#on mac, or the java for the GUI
+	#I may be able to run the linux on the server
+	
+	#Looks like it maybe takes .gen input. Convert from vcf tools?
+		#vcftools output options --012 might work (http://vcftools.sourceforge.net/man_latest.html)
+		#Format of input data is either GENEPOP” or “FSTAT”. See “About the Input Data Format” below for more details.
+				#PGD Spider (works on Mac with java)
+		#I will probably need to filter by or indicate population
+		
+#First try running with all and 7 population definitions
+	#Then also try only similis
+	#Only similis with same number site
+	#Site level
+	#Remove solidissima tag alongs
+		  8   CTM_008   (24)    4 :  0.999 0.000 0.000
+		  21   MW_001   (24)    4 :  0.999 0.001 0.000 
+		  22   MW_002   (23)    4 :  0.999 0.000 0.000
+		  33   MW_016   (36)    4 :  0.999 0.001 0.001
+		  48   MW_033   (25)    4 :  0.999 0.000 0.000
+	#From Run not out file if I wanted to graph them myself
+	
+#Moved it into its own folder and now its working
+	#Put genepop (.txt) file into the same folder
+	#Beware temporal method or otherwise. For this I will assume not temporal (all similis is either from 2012 or 2019)
+
+
+#Date: Oct 21st 2021
+#https://en.wikipedia.org/wiki/Isolation_by_distance
+		#Do I just set all of the individuals to their own pop? <- probably not
+		#The Mantel test (by site)
+		#Gustave Malécot- Genetic Isolation By Distance
+			#Identical by descent (also IBD)
+				#Alternatively IBS - Identical by State <- not used cause theory
+			#Within population distance
+			#Kinship co-efficient? φ
+
+	#Fst or Fst/(1-Fst)
+	
+	#R
+	#adegenet will allow you to compute genetic distances
+	#BIO-R (https://data.cimmyt.org/dataset.xhtml?persistentId=hdl:11529/10820) - BIO-R will give you Rogers and Nei distance matrix with clustering option using SNP data.
+		#Nei’s minimum distance matrix (as calculated in TFPGA v1.3 [39], was conducted using theSAHN module in NTSYS v2.10)
+	
+	#https://popgen.nescent.org/2015-05-18-Dist-SNP.html
+		#Individual genetic distance: euclidean distance (dist {adegenet})	
+		#Actually shows three different metrics for distance between two individuals
+			#Try graph with all three?
+			#jiggle for distances?
+			#what are my distances?
+				#in excel
+	
+	#FIS is often used
+		#Fis. plink			
+		
+		
+	#AMOVA? A separate analysis? Also euclidian? : https://dyerlab.github.io/applied_population_genetics/genetic-distances.html
+	#https://www.fs.fed.us/rm/pubs_journals/2017/rmrs_2017_shirk_a001.pdf
+		#We used the R package “ADEGENET” (Jombart,2008) to calculate proportion of shared alleles
+		#Population genetic structure, as measured by the mean inbreedingcoefficient (FIS) 
+
+	#other adegenet functions that might help
+	#gengraph: The function gengraph generates graphs based on genetic distances, so that pairs of entities (individuals or populations) are connected if and only if they are distant by less than a given threshold
+	
+	
+#test removing for less duplicates
+	#keep	#remove
+	#GA_MA	#MA_GA
+	#GA_NY	#NY_GA
+	#NY_MA	#MA_NY
+	#GA_GA
+	#MA_MA
+	#NY_NY
+
+
+
+##Linkage disequilibrium test from filtered loci
+https://pbgworks.org/sites/pbgworks.org/files/measuresoflinkagedisequilibrium-111119214123-phpapp01_0.pdf
+
+#Use the vcf with this title:
+DP3g95p5maf05_simonly.FIL.recode.vcf
+#these ones have all sites per radtag
+#Then you can also do it for only one per radtag
+
+https://www.biostars.org/p/116756/
+plink --file mydata 
+      --r2 
+      --ld-snp rs12345 
+      --ld-window-kb 1000 
+      --ld-window 99999 
+      --ld-window-r2 0
+      
+https://cran.r-project.org/web/packages/ldsep/vignettes/vcf.html
+#in R
+

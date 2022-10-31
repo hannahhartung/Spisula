@@ -1,0 +1,16 @@
+# Notes on Moving Stuff off of Cloud
+#
+
+#Move to...
+/local/storage
+
+#made the directories, stumbled on how much from marker dev to move over?
+#GO folder was empty - didn't put anything in yet
+
+#I do not really need to save anything from the workshops but check the backup folder
+
+cp -r /home/mph75_0001/shared/Hannah/Spisula/Transcriptomes/ ./Transcriptomes/ &
+
+#Moved everything from transcriptomes
+
+#REMEMBER TO ADD READ MEs

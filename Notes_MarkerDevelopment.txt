@@ -1280,7 +1280,7 @@ After filtering, kept 1137437 out of a possible 1137437 Sites
 
 #bcftools filter options
 -S, --set-GTs .|0
-set genotypes of failed samples to missing value (.) or reference allele (0)
+#set genotypes of failed samples to missing value (.) or reference allele (0)
 --threads INT
 -i or -e 'expression'
 GT="."
@@ -4005,7 +4005,7 @@ awk '{print $1, $2}' Sim.filtered3.vcf > Sim.filter.index.vcf
 
 
 
-Sub2 Test
+#Sub2 Test
 head Sol.testplus.vcf > Sol.sub2.vcf
 awk '{print $1, $2}' Sim.filtered3.vcf | head > Sim.sub2.vcf
 
@@ -4029,10 +4029,6 @@ awk '{if($1==a && $2==b) {print} }' Sol.sub2.vcf
 done < Sim.sub2.vcf 
 
 
-
-
-
-
 while IFS='' read -r LINE || [ -n "${LINE}" ]; do
 echo ${LINE}
 echo "${LINE}" | cut -d " " --f 1 > a.txt
@@ -4040,14 +4036,10 @@ echo "${LINE}" | cut -d " " --f 2 > b.txt
 awk '{if($1== && $2==b.txt) {print} }' Sol.sub2.vcf
 done < Sim.sub2.vcf 
 
-
-
 while IFS='' read -r LINE || [ -n "${LINE}" ]; do
 echo ${LINE}
 cut -d " " --f 1 "${LINE}" 
 cut -d " " --f 2 "${LINE}"
 awk '{if($1== cut -d " " --f 1 "${LINE}"  && $2==cut -d " " --f 2 "${LINE}") {print} }' Sol.sub2.vcf
 done < Sim.sub2.vcf 
-
-
 

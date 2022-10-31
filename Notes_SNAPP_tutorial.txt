@@ -1,0 +1,679 @@
+#Date: June 5th
+## SNAPP Tutorial
+https://github.com/ForBioPhylogenomics/tutorials/blob/main/divergence_time_estimation_with_snp_data/README.md
+
+#Exclude some individuals
+bcftools view -s ^IZA1,AXD5,JBD5,JUI1,KHA9,IVF1,JWH1,JWG8,JWH3,JWH5,ISA6,IYA4,KFD4 -o NC_031969.f5.sub5.vcf NC_031969.f5.sub4.vcf
+#Remove now monomorphic sites
+bcftools view -e 'AC==0 || AC==AN || F_MISSING > 0.0'
+	#However, this is not necessary because the snapp_prep.rb script, which will be used to write the XML file for SNAPP, will automatically exclude these sites anyway.
+#Run the ruby script
+/programs/ruby/bin/ruby snapp_prep.rb -h
+#Walk through the input options
+	#Species file
+		nano individuals.txt
+	#Constraints
+		#For the constraint file, we'll need to specify at least one age constraint for a divergence among the 13 cichlid species.
+		#For this, we can refer to the results of the analysis with the multi-species coalescent model in tutorial Bayesian Species-Tree Inference.
+			https://github.com/ForBioPhylogenomics/tutorials/blob/main/bayesian_species_tree_inference/README.md
+			#So do I need to do that first?
+		#For now, just do this tutorial
+	#It can randomly subset the SNPs so you don't have to do that ahead of time
+	/programs/ruby/bin/ruby snapp_prep.rb -v NC_031969.f5.sub5.vcf -t individuals.txt -c constraints.txt -m 1000 -l 100000
+		#To limit the dataset to 1,000 randomly selected SNPs and to set a chain length of 100,000 MCMC iterations
+		#To specify that the XML file should be for SNAPP rather than SNAPPER, option -a does not need to be specified because the SNAPP format is produced by default
+	#Quite fast
+#Run SNAPP slurm
+#Set up the runs different for my machine
+
+#!/bin/bash
+# Job name:
+#SBATCH --job-name=snapp
+#
+# Wall clock limit:
+#SBATCH --time=2:00:00
+#
+# Processor and memory usage:
+#SBATCH --ntasks=16
+#SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=1G
+#
+# Output:
+#SBATCH --output=run_snapp.out
+  
+# Set up job environment.
+set -o errexit  # Exit the script on any error
+set -o nounset  # Treat any unset variables as an error
+#module --quiet purge  # Reset the modules to the system default
+
+# Load the beast2 module.
+#module load Beast/2.6.4-GCC-9.3.0
+
+# Run snapp.
+#/programs/beast-2.6.7/bin/beast -threads 16 snapp.xml
+
+#Where is my SNAPP located
+#/home/hh693/.beast/2.5
+
+java -jar /home/hh693/.beast/2.5/BEAST/lib/beast.jar -threads 16 snapp.xml
+
+sbatch --nodes=1 --ntasks=16 run_snapp.slurm
+
+#Check if SNAPP is installed
+/home/hh693/.beast/2.5/BEAST/bin/addonmanager -list #Did not work
+/programs/beast-2.6.7/bin/packagemanager -list	#This one does show it installed
+
+/programs/beast-2.6.7/bin/beast snapp.xml #Does NOT work because SNAPP is installed for me on BEAST 2.5 I guess
+
+/programs/beast-2.5.1/bin/beast -threads 16 snapp.xml #This one works
+
+
+#Date: June 9th
+#Moving beyond the SNAPP tutorial to just basic SNAPP
+#Estimate the mutation rates according to https://groups.google.com/g/beast-users/c/IpAB4QYR9q0
+#Set all population sizes equal (10,000)
+
+#Use Beauti to create XML file
+	#Try VCN viewer
+#Start program in terminal
+/programs/beast/bin/beauti
+	#Working
+	#But no snapper
+#If I do
+/programs/beast-2.6.7/bin/beauti
+#Then I can run snapper
+
+#Before converting to XML, it must first be a nexus file
+#Vcf to nexus
+#Using https://github.com/edgardomortiz/vcf2phylip
+	#wget did not work so I copy-pasted
+#First subsample it I suppose
+#Actually nice that I can work with this data set then because I always want to subsample with some sol as reference etc.
+
+#Output samples with the least missing data
+vcftools --vcf SNP_solrefall_LDprune.vcf --missing-indv
+sort -k 5 out.imiss
+#Pull into excel
+
+GA12_006	3335	0	47	0.014093	GA
+GA12_001	3335	0	48	0.0143928	GA
+
+MW_027	3335	0	39	0.0116942	MA
+WFH_008	3335	0	41	0.0122939	MA
+
+GLD0819_007	3335	0	33	0.00989505	NLI
+GLD0819_006	3335	0	38	0.0113943	NLI
+
+
+GBE_482	3335	0	12	0.0035982	Boff
+GBE_523	3335	0	15	0.00449775	Boff
+
+#Filter to just include those
+vcftools --vcf SNP_solrefall_LDprune.vcf --recode --recode-INFO-all --out subset_a0609 \
+--indv GA12_006 \
+--indv GA12_001 \
+--indv MW_027 \
+--indv WFH_008 \
+--indv GLD0819_007 \
+--indv GLD0819_006 \
+--indv GBE_482 \
+--indv GBE_523
+
+#Now I still have 3000 SNPs so I would like to subset semirandomly to only keep a few for the first test
+grep -v "#" subset_a0609.recode.vcf | awk '{print $1,$2}' | grep "2" | grep "5" | grep -v "8" | grep -v "3" | grep -v "55" | grep -v "25" | grep "1" | grep -v "4" > subsample_b_loci.txt
+#87 SNPs
+
+vcftools --vcf subset_a0609.recode.vcf --positions subsample_b_loci.txt --recode --recode-INFO-all --out subset_b0609
+#Noice
+python vcf2phylip.py --help
+
+#Convert to nexus
+python vcf2phylip.py -i subset_b0609.recode.vcf --output-prefix subset_b0609 -p -n
+
+#I may want to
+#-r, --resolve-IUPAC   Randomly resolve heterozygous genotypes to avoid IUPAC ambiguities in the matrices (disabled by default)
+	#Cause otherwise there's lots of Ws and the like to show heterozygotes
+
+python vcf2phylip.py -i subset_b0609.recode.vcf -r --output-prefix subset_b0609r -p -n
+
+#Import into beauti
+#First change the Template > SNAPP
+
+#Calculate mutation rates
+u = 1/2pi_0
+v = 1/2pi_1
+#Where pi_0 is the frequency of the reference and pi_1 is frequency of alt allele
+
+#Count how many times it sees the value in quotes per line for input file		 sum all of the lines together
+while read i; do echo $i |grep -o "0/0"| wc -l;  done < subset_b0609.recode.vcf | awk '{s+=$1} END {print s}'
+while read i; do echo $i |grep -o "0/1"| wc -l;  done < subset_b0609.recode.vcf | awk '{s+=$1} END {print s}'
+#while read i; do echo $i |grep -o "1/0"| wc -l;  done < subset_b0609.recode.vcf | awk '{s+=$1} END {print s}'
+		#There are none, as their should not be
+while read i; do echo $i |grep -o "1/1"| wc -l;  done < subset_b0609.recode.vcf | awk '{s+=$1} END {print s}'
+
+#AA = 298, Aa = 90, aa = 80
+#A = 686, a = 250, total = 936
+#A = 0.73, a = 0.27
+u = 1/(2*0.73) = 0.68
+v = 1/(2*0.27) = 1.85
+
+#I unchecked the box for including non-polymorphic sites
+#From manual: It is important to check this box if SNP data is being used, as the likelihood calculations are quite different if SNAPP assumes all constant sites have already been removed.
+	#Does that mean I should check it?? Cause SNPs? Unclear wording - check google groups later
+
+#Date: June 10th
+#Try to run SNAPP with input xml file
+subset_b0609r_beauti.xml
+#I do not think that the BioHPC site on how to run snapp is helpful
+
+/programs/beast-2.6.7/bin/beast subset_b0609r_beauti.xml
+#This worked
+#Do inside its own folder cause I don't know how to set outputs
+/programs/beast-2.6.7/bin/beast -overwrite subset_b0609r_beauti.xml &> b0609r_1.log &
+#The flags MUST come before the input
+-threads
+#One thread		8 samples 		87 loci			10 minutes      =~    500k MCMC
+												#1057.838 seconds for 1 million MCMC
+
+#Date: June 11th
+#Apply and plot outputs
+#Analyse in tracer
+#Plot on my computer
+
+#Date: June 12th
+#Run an actual SNAPP run
+#Use three samples per and have Bin Boff, A and others
+
+MCX_019	3335	0	29	0.00869565	A
+PLY_001	3335	0	33	0.00989505	A
+BLP_191	3335	0	34	0.0101949	A
+
+PT_018	3335	0	25	0.00749625	Bin
+PVT_004	3335	0	33	0.00989505	Bin
+PLY_003	3335	0	34	0.0101949	Bin
+
+GBE_482	3335	0	12	0.0035982	Boff
+GBE_523	3335	0	15	0.00449775	Boff
+536_023	3335	0	16	0.0047976	Boff
+
+GA12_006	3335	0	47	0.014093	GA
+GA12_001	3335	0	48	0.0143928	GA
+GA12_015	3335	0	48	0.0143928	GA
+
+MW_027	3335	0	39	0.0116942	MA
+WFH_008	3335	0	41	0.0122939	MA
+CTM_001	3335	0	42	0.0125937	MA
+
+GLD0819_007	3335	0	33	0.00989505	NLI
+GLD0819_006	3335	0	38	0.0113943	NLI
+GLD0819_005	3335	0	39	0.0116942	NLI
+
+nano c.keep 
+
+vcftools --vcf SNP_solrefall_LDprune.vcf --recode --recode-INFO-all --out subset_c0612 \
+--keep c.keep
+
+#Do one with r and one without
+#BUT dont try to run at the same time - use the full force of the threads on one at once
+python vcf2phylip.py -i subset_c0612.recode.vcf --output-prefix subset_c0612 -p -n
+python vcf2phylip.py -i subset_c0612.recode.vcf -r --output-prefix subset_c0612r -p -n
+
+#Run with all of the loci in the LD set (~3k)
+#Run on multiple threads
+#In SNAPP (from ref in Slack):
+	#the mutation rates u and v were set to 1.0, 
+	#the lambda prior was set to a gamma distribution 
+		#with alpha = 2.0 and beta = 200.0, 
+	#the ‘snapprior’ was set to default values.
+	#SNAPP was run for 4,500,000 iterations, 
+		#sampling the MCMC chain every 4,500 iteration. 
+	#The first 10% of samples were discarded as burn-in and convergence was assessed by examining trace plots in TRACER v1.6 (Rambaut et al., 2014) ensuring that all parameter ESS >200.
+
+#I also turned off the include non-poly
+
+/programs/beast-2.6.7/bin/beast -overwrite -threads 14 c0612.xml &> c0612_1.log
+
+sbatch --nodes=1 --ntasks=14 --mem=20000 -o SNAPP1c.out -J c0612_14th_20G s_c0612.sh
+#Seems like it maxes out at 10 threads and  doesn't really do much more than that
+/programs/beast-2.6.7/bin/beast -overwrite -threads 8 c0612r.xml &> c0612r_2.log &
+
+
+#Date: June 16th
+#Redo the tree with the LD02 dataset
+#set d0616
+#How do I set up the data for haplotypes?
+	#Sed 0/1 to 0/0 for one file of the individuals, Sed 0/1 to 1/1 for the same set of individuals, then alter names, then merge vcfs
+	#Is this reasonable, or is it more common to do the other? Papers? I think Matt just landed on one haplotype per individual so I'm just going to do the no uncertainty mode
+#Subset File
+	#New subsetting based on the coverage measures I found earlier?
+	#Nope, because the ones I chose before were about the data missingness and that's what more relevant here
+	#c.keep
+vcftools --vcf SNP_solrefall_LD02prune.vcf --recode --recode-INFO-all \
+--out d0616 --keep c.keep
+
+#Convert to Nexus
+#-r means randomly resolve IUPAC
+python vcf2phylip.py -r -i d0616.recode.vcf --output-prefix d0616 -p -n
+#Connect to VCN
+#Run beauti
+	#Set template to SNAPP
+	#Open alignment nexus
+	#Set Species/Population
+
+536_023		Sol_B_Off
+BLP_191		Sol_A
+CGC_007		Sol_A
+CTM_001		Sim_MA
+GA12_001	Sim_GA
+GA12_006	Sim_GA
+GA12_015	Sim_GA
+GBE_482		Sol_B_Off
+GBE_523		Sol_B_Off
+GLD0819_005	Sim_NLI
+GLD0819_006	Sim_NLI
+GLD0819_007	Sim_NLI
+MCX_019		Sol_A
+MW_027		Sim_MA
+#PLY_001		Sol_A
+PT_018		Sol_B_In
+PVT_004		Sol_B_In
+PLY_003		Sol_B_In
+WFH_008		Sim_MA
+#WV1_010		Sol_A
+	
+	#Other Parameters
+#Turn off non-polymorphic
+#Lambda still set to 1/X rather than gamma
+#Run for 5 million MCMC
+	#Record every 1000
+	#No pre-burnin
+	#10 Initialization Attempts
+
+	#Save as xml file
+
+	#Run Script
+
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=temp
+#SBATCH --output=temp.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+
+/programs/beast-2.6.7/bin/beast -overwrite -threads 20 d0616.xml &> d0616_1.log
+echo "finished!"
+
+sbatch --nodes=1 --ntasks=20 --mem=40000 -o SNAPP1d.out -J d0612_20th_40G s_d.sh
+#Right, as a reminder, it's bad at maxing out the threads but it will always go to a % of the ones you offer (8 or 10 might be closer to optimized)
+
+#Date: June 23rd
+#SNAPPER attempt
+e_0623
+#Set SNAPPER template
+#Use d input nexus alignment
+
+#PLY_001 is a BAD EXAMPLE FOR SOLA cause it's a lot more like a B_in
+#So change out
+WV1_010		Sol_A
+
+nano c.keep  #Save as e.keep
+
+vcftools --vcf SNP_solrefall_LD02prune.vcf --recode --recode-INFO-all --out subset_e0623 \
+--keep e.keep
+##THIS DATASET IS THE ONE WITHOUT WV AND SL <- Fix later
+#Use 
+CGC_007		Sol_A
+
+python vcf2phylip.py -r -i subset_e0623.recode.vcf --output-prefix e0623 -p -n
+#Parameters
+#Coalscent = 10.0 #Like other
+# N = 9 #To be faster
+
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=temp
+#SBATCH --output=temp.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+
+/programs/beast-2.6.7/bin/beast -overwrite -threads 40 e0623_SNAPP.xml &> e0616_2_SNAPP.log
+echo "finished!"
+sbatch --nodes=1 --ntasks=40 --mem=60000 -o SNAPP2e.out -J e_SNAPP_40th_60G s_e.sh
+
+#Make sure I'm calling from the directory that has snapper installed
+#Doesn't seem like it's on any of them
+/programs/beast-2.4.5/bin/beast -overwrite -threads 40 e0623_snappER.xml &> e0616_1_sanpper.log
+/programs/beast-2.6.7/bin/packagemanager -list	#This one does show snapper also installed
+
+java -jar /programs/beast/lib/beast.jar e0623_snappER.xml
+/home/hh693/.beast/2.5/BEAST/bin/addonmanager
+#Get beasti jar in my folder??
+java -jar /home/hh693/.beast/2.6/snapper/snapper.src.jar e0623_snappER.xml
+#It's in there but I cannot run from there.
+
+
+#Date: July 26th
+#Set up new SNAPP or SNAPPER runs
+
+#Test if I can run my old SNAPPER run with the new instructions
+#New Instructions for Installation
+#Completed - basically the same except the install was a bit different and is now stored under
+/home/hh693/beast-2.6.7
+#Run
+#/programs/beast-2.6.7/bin/beast -overwrite -threads 10 e0623_SNAPP.xml &> e0616_2_SNAPP.log
+#Try at the new region
+/home/hh693/beast-2.6.7/bin/beast -overwrite -threads 10 e0623_SNAPP.xml &> e0616_2_SNAPP.log
+#Seems like it's actually running! Great!
+#Confirm I can still run SNAPP
+/home/hh693/beast-2.6.7/bin/beast -overwrite -threads 10 subset_b0609r_beauti.xml &> e0616_3_test_SNAPP.log
+#Great!
+#However, it doesn't seem like it necessarily tracks the timing
+	#Instead, assume it's likely 24-48 hours for 40
+	#Assume 24 hours on 20 threads? For SNAPPER?
+#Print date and time
+start="$(date +%M)"
+echo "Starting at $(date)"
+#Insert script
+finish="$(date +%M)"
+echo "Finished! $(date)"
+diff=$(echo "$finish-$start" |bc)
+echo "Script completed in $diff minutes."
+
+#Reserve other servers
+#First prepare the files 
+	#SNP-based LDprune vcf
+		#Solall
+			#Make Solonly with Sim outgroup using SolALL
+		#Simonly
+			#Sim with sol extra (ideally)
+#Servers
+#Maybe try to reserve lots of servers and put them all in one slurm?
+	#Whatever, maybe
+manage_slurm new cbsumm27
+
+#Filter to some subsets of samples
+#Missingness samples
+vcftools --vcf SNP_simonly_LDprune.vcf --missing-indv --out prep/simonly
+#View the top few
+sort -k 5 simall.imiss | head -30
+#Confirm that they are not hybrid-y using K2 structure results (saved in excel)
+
+#Run lists
+	#a - sim mostly with sol outgorup (simallLDprune)
+	#b - sim only (no sol because MORE SNPs)
+	
+#
+vcftools --vcf SNP_solrefall_LDprune.vcf --recode --recode-INFO-all \
+--out prep/subset_c0726 \
+--indv GA12_017 \
+--indv GA12_025 \
+--indv GA12_024 \
+--indv 536_020 \
+--indv FNJ_006 \
+--indv PT_020 \
+--indv BLP_191 \
+--indv MCX_019 \
+--indv MCX_066
+
+#Subset and convert to nexus
+cd prep
+	#Aim for ~1000 SNPS
+		#Do not need to subset set a
+	shuf -n 1000 #randomly subsamples a collection of 1000 loci
+
+#Set a0726 has only 442 SNPs
+#Set b0726
+grep -v "#" subset_b0726.recode.vcf | awk '{print $1,$2}' | shuf -n 1000 > subsample_b_loci.txt
+vcftools --vcf subset_b0726.recode.vcf --positions subsample_b_loci.txt --recode --recode-INFO-all --out subset_b0726_byloci
+#Sets c-d
+grep -v "#" subset_c0726.recode.vcf | awk '{print $1,$2}' | shuf -n 1000 > subsample_c_loci.txt
+vcftools --vcf subset_c0726.recode.vcf --positions subsample_c_loci.txt --recode --recode-INFO-all --out subset_c0726_byloci
+grep -v "#" subset_d0726.recode.vcf | awk '{print $1,$2}' | shuf -n 1000 > subsample_d_loci.txt
+vcftools --vcf subset_d0726.recode.vcf --positions subsample_d_loci.txt --recode --recode-INFO-all --out subset_d0726_byloci
+#Set d0726 has only 442 SNPs
+
+#Convert to Nexus
+#Resolving heterozygosity randomly
+python vcf2phylip.py -i subset_a0726.recode.vcf -r --output-prefix subset_a0726 -p -n
+python vcf2phylip.py -i subset_b0726_byloci.recode.vcf -r --output-prefix subset_b0726 -p -n
+python vcf2phylip.py -i subset_c0726_byloci.recode.vcf -r --output-prefix subset_c0726 -p -n
+python vcf2phylip.py -i subset_d0726_byloci.recode.vcf -r --output-prefix subset_d0726 -p -n
+python vcf2phylip.py -i subset_e0726.recode.vcf -r --output-prefix subset_e0726 -p -n
+python vcf2phylip.py -i subset_f0728.recode.vcf -r --output-prefix subset_f0728 -p -n
+
+
+#Calculate mutation rates
+	u = 1/2pi_0
+	v = 1/2pi_1
+	#Where pi_0 is the frequency of the reference and pi_1 is frequency of alt allele
+#Set the Set Name
+sete="f0728"
+#Run all of this as a block of text
+AA1=$(while read i; do echo $i |grep -o "0/0"| wc -l;  done < subset_$sete.recode.vcf | awk '{s+=$1} END {print s}')
+Aa2=$(while read i; do echo $i |grep -o "0/1"| wc -l;  done < subset_$sete.recode.vcf | awk '{s+=$1} END {print s}')
+aa3=$(while read i; do echo $i |grep -o "1/1"| wc -l;  done < subset_$sete.recode.vcf | awk '{s+=$1} END {print s}')
+A4=$(echo "2.0*$AA1+$Aa2" | bc)
+a5=$(echo "2.0*$aa3+$Aa2" | bc)
+t6=$(echo "2.0*($aa3+$Aa2+$AA1)" | bc)
+Af4=$(echo "$A4/$t6" | bc -l)
+af5=$(echo "$a5/$t6" | bc -l)
+u6=$(echo "1/(2*$Af4)" | bc -l)
+v7=$(echo "1/(2*$af5)" | bc -l)
+echo "u = $u6"
+echo "v = $v7"
+
+#Import into Beauti
+	#For SNAPP use:
+		/programs/beast-2.5.2/bin/beauti
+	#For snapper:
+		/home/hh693/beast-2.6.7/bin/beauti
+	#Change Template > SNAPP or snapper
+	#Add Alignment
+	#Insert mutation rates (for some sets, try setting them just to 1)
+	#Uncheck the box for including non-polymorphic sites
+	#Set Priors
+		#Lambda
+			#Gamma distribution
+			#Alpha = 2.0
+			#Beta = 200.0
+		#"snapprior" set at default values
+	#MCMC
+		#5,000,000 	Chains
+		#1000		Sampling Record
+		#No pre-burnin
+		#10 Initialization Attempts
+	#Save as .xml - a0726.xml		
+	
+	#For snapper
+		#N = 33 
+		#Uncheck non-polymorphic
+		#Priors to default?
+		#5,000,000 	Chains
+		#Store every 1000
+
+#Create script
+nano s_c.sh
+
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=temp
+#SBATCH --output=temp.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+
+#Print Start Time
+start="$(date +%M)"
+echo "Starting at $(date)"
+#Run
+/home/hh693/beast-2.6.7/bin/beast -overwrite -threads 38 c0726.xml &> a0726_1.log
+#Print End Time
+finish="$(date +%M)"
+echo "Finished! $(date)"
+diff=$(echo "$finish-$start" |bc)
+echo "Script completed in $diff minutes."
+
+#Run
+sbatch --nodes=1 --ntasks=38 --mem=150000 -o c0726_s.out -J c_SNAPP s_c.sh
+	#In the past I ran it only requiring 60,000 mem but on servers, why not use the extra mem?
+/home/hh693/beast-2.6.7/bin/beast -overwrite -threads 18 b0726_snapper.xml &> b0726_snapper.log
+sbatch --nodes=1 --ntasks=18 --mem=80000 -o b0726_snapper.out -J b_Snapper s_b_snapper.sh
+
+nano s_e_snapper.sh
+/home/hh693/beast-2.6.7/bin/beast -overwrite -threads 18 e_snapper.xml &> e0726_snapper.log
+sbatch --nodes=1 --ntasks=18 --mem=80000 -o e0726_snapper.out -J e_Snapper s_e_snapper.sh
+
+#Date: July 28th
+#Tree Annotator
+/home/hh693/beast-2.6.7/bin/treeannotator
+#I think I need to run it in the VNC
+#DON'T NAME THE XML FILE EXACTLY LIKE THE LOG FILE OR IT WONT WORK CAUSE IT NEEDS TO MAKE ITS OWN LOG FILE TOO
+
+sbatch --nodes=1 --ntasks=19 --mem=80000 -o b0728_snapper_s.out -J b_Snapper s_b_snapper.sh
+sbatch --nodes=1 --ntasks=19 --mem=80000 -o e0728_snapper_s.out -J e_Snapper s_e_snapper.sh
+sbatch --nodes=1 --ntasks=19 --mem=80000 -o d0728_snapper_s.out -J d_Snapper s_d_snapper.sh
+
+#Run f
+#Make a new set which is similis reference with sim and then sol outgroup (based on OTU A)
+#I also used the secondary groups for similis
+vcftools --vcf SNP_simrefall_LDprune.vcf --recode --recode-INFO-all \
+--out prep/subset_f0728 \
+--indv GA12_017 \
+--indv GA12_025 \
+--indv GA12_024 \
+--indv GLD0819_006 \
+--indv GLD0819_007 \
+--indv GLD0819_001 \
+--indv ELP_009 \
+--indv MW_045 \
+--indv WFH_006 \
+--indv BLP_191 \
+--indv MCX_019 \
+--indv MCX_066
+
+sbatch --nodes=1 --ntasks=38 --mem=150000 -o f0728_SNAPP_s.out -J f_SNAPP s_f.sh
+sbatch --nodes=1 --ntasks=19 --mem=80000 -o f0728_snapper_s.out -J f_Snapper s_f_snapper.sh
+
+
+#Date: Aug 1st
+#Attempt PAUP SVDquartets
+#Starting with subsampled and smaller vcf - only 442 SNPs
+python vcf2phylip.py -i subset_a0726.recode.vcf -r --output-prefix test_a0726r -p -n
+python vcf2phylip.py -i subset_a0726.recode.vcf --output-prefix test_a0726 -p -n
+
+#Begin
+/programs/paup4a166/paup
+#Load
+exe test_a0726.min4.nexus
+#Set outgroups
+outgroup 1
+outgroup 2
+outgroup 3
+#Run
+svdq taxpartition=none showScores=no seed=42542314 bootstrap nreps=1000 treeFile=mybootstraptrees_noR.tre;
+
+python vcf2phylip.py -i SNP_simrefall_LDprune.vcf -r --output-prefix test_simall1r -p -n
+python vcf2phylip.py -i SNP_simrefall_LDprune.vcf --output-prefix test_simall1 -p -n
+
+#Begin
+/programs/paup4a166/paup
+#Load
+exe test_simall1.min4.nexus
+#Set outgroups
+#outgroup 1
+#outgroup 2
+#outgroup 3
+#Run
+svdq taxpartition=none showScores=no seed=425314 bootstrap nreps=1000 treeFile=mybstree_all_noR.tre;
+
+#Select Similis samples?
+GLD0819 004
+PEC0819 013
+PEC0819 012
+
+MW 008
+MW 010
+CTM 007
+
+GA12 001
+GA12 007
+GA12 023
+
+#Ran this g in only PAUP, g otherwise refers to solidissima only when run in Snapper
+vcftools --vcf SNP_simrefall_LDprune.vcf --recode --recode-INFO-all \
+--out subset_g0801 \
+--indv GA12_001 \
+--indv GA12_007 \
+--indv GA12_023 \
+--indv GLD0819_004 \
+--indv PEC0819_013 \
+--indv RP20_010 \
+--indv MW_008 \
+--indv MW_010 \
+--indv MW_007 \
+--indv BLP_191 \
+--indv MCX_019 \
+--indv MCX_066
+
+python vcf2phylip.py -i subset_g0801.recode.vcf --output-prefix test_g1 -p -n
+/programs/paup4a166/paup
+exe test_g1.min4.nexus
+outgroup 6
+outgroup 7
+outgroup 8
+
+svdq taxpartition=none showScores=no seed=46999343 bootstrap nreps=1000 treeFile=mybstree_g_noR_2.tre;
+
+#Date: Aug 5th 2022
+#Start snapper run on home server for solidissima only for comparison with time
+vcftools --vcf SNP_solrefall_LDprune.vcf --recode --recode-INFO-all \
+--out prep/subset_g0805 \
+--indv BLP_191 \
+--indv MCX_019 \
+--indv MCX_066 \
+--indv 536_020 \
+--indv 536_023 \
+--indv BAR_010
+
+#h is g but run with backup samples
+vcftools --vcf SNP_solrefall_LDprune.vcf --recode --recode-INFO-all \
+--out prep/subset_h0805 \
+--indv BLP_195 \
+--indv MCX_089 \
+--indv BLP_213 \
+--indv FNJ_006 \
+--indv FNJ_033 \
+--indv PT_020
+
+#Randomly subset 1000 loci
+#Convert to Nexus
+cd prep
+#g
+grep -v "#" subset_g0805.recode.vcf | awk '{print $1,$2}' | shuf -n 1000 > subsample_g_loci.txt
+vcftools --vcf subset_g0805.recode.vcf --positions subsample_g_loci.txt --recode --recode-INFO-all --out subset_g0805_byloci
+python vcf2phylip.py -i subset_g0805_byloci.recode.vcf -r --output-prefix subset_g0805 -p -n
+#h
+grep -v "#" subset_h0805.recode.vcf | awk '{print $1,$2}' | shuf -n 1000 > subsample_h_loci.txt
+vcftools --vcf subset_h0805.recode.vcf --positions subsample_h_loci.txt --recode --recode-INFO-all --out subset_h0805_byloci
+python vcf2phylip.py -i subset_h0805_byloci.recode.vcf -r --output-prefix subset_h0805 -p -n
+
+sbatch --nodes=1 --ntasks=38 --mem=150000 -o g00805_s.out -J g_SNAPPer s_g.sh
+sbatch --nodes=1 --ntasks=24 --mem=90000 -o h00805_s.out -J h_SNAPPer s_h.sh
+sbatch --nodes=1 --ntasks=38 --mem=150000 -o b0805_s.out -J b_SNAPPer s_b_snapper.sh
+
+#Date: Aug 5th
+#Run TreeAnnotator with more oomph - aka last time it just made a consensus tree but this time I want it to 
+	#annotate it with posterior probabilities, HPD node heights and rates.
+/home/hh693/beast-2.6.7/bin/treeannotator
+	#Run in VNC?
+	#That's what a did before, just maxes maximum and I'm not sure how to view annotations
+	#Maybe they are there but just only show up in FigTree?
+		#Yup, FigTree's got it, just employ the Node Labels - not sure which I want
+			#None are bootstrap but posterior might be good
+			
+sbatch --nodes=1 --ntasks=24 --mem=90000 -o h00805_s.out -J h_SNAPPer s_a.sh

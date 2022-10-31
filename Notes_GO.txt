@@ -1,7 +1,6 @@
-# June 12th
+# Date: June 12th
 # Preparing nice transcriptomes and annotating them
 # To engage BBEdit colors, at the bottom of the window select Unix Shell Script as the file type.
-
 
 
 #### TRIM ####
@@ -61,7 +60,8 @@ $TRINITY_HOME/Trinity --seqType fq \
 --output $TRINITY_OUT
 
 #Including the Trimmomatic stage here as well (by default) removed less than 0.01% of reads.
-#June 13th, it looks like Solidissima got caught up after crysalis, try again with no trimmomatic setting
+#Date: June 13th
+#it looks like Solidissima got caught up after crysalis, try again with no trimmomatic setting
 		#Ran both yesterday with max_mem 2G but I could do more like 100G
 		#20 CPU and 100G memory each today and no trimmomatic. Start from empty directory for both
 #Run as scripts to save good log file
@@ -116,11 +116,60 @@ nohup ./Trinity_sim4_script.sh >& logs2021/Trinity_sim_june13d.log &
 398M Jun 15 07:57 Trinity_sol.fasta
 
 
+#Download Lineage Datasets
+https://busco-data.ezlab.org/v4/data/lineages/
+https://busco.ezlab.org/frames/euka.htm
 
 #### CLEAN TRIINITY AND QA ####
 
 
+#Date: Aug 9th 2021
+export BUSCO_CONFIG_FILE=/workdir/hh693/config.ini 
+export PYTHONPATH=/programs/busco-3.1.0/lib/python3.6/site-packages 
+export PATH=/programs/busco-3.1.0/scripts:$PATH
+#OR
+source /programs/miniconda3/bin/activate busco-5.1.2
+#but try the second anyway because version 3 is now quite old
+#once you enter this mode type:
+conda deactivate
+#to get back to normal bash
 
+
+#run command #-m transcriptome
+busco -i Trinity_sim.fasta -l ..db/busco/metazoa_odb10 -o BUSCO/BUSCO_sim_default
+busco -i Trinity_sim.fasta -l ..db/busco/metazoa_odb10 -m transcriptome -o BUSCO/BUSCO_sim_trans
+
+
+
+
+#Date: July 15th 2021
+#New Path
+#set environment
+#DOES NOT WORK WELL WITH SLURM  - but try it anyway because version 3 is now quite old
+source /programs/miniconda3/bin/activate busco-5.1.2
+#run command #-m transcriptome
+busco -i Trinity_sim.fasta -l ..db/busco/metazoa_odb10 -o ../BUSCO/BUSCO_sim_geno
+busco -i Trinity_sim.fasta -l ..db/busco/metazoa_odb10 -m transcriptome -o ../BUSCO/BUSCO_sim_trans
+
+
+chmod u+x slurm_busco_test.sh 
+sbatch --nodes=1 --ntasks=16 slurm_busco_test.sh
+#Started but failed
+
+#old path
+export BUSCO_CONFIG_FILE=/workdir/hh693/config.ini 
+export PYTHONPATH=/programs/busco-3.1.0/lib/python3.6/site-packages 
+export PATH=/programs/busco-3.1.0/scripts:$PATH
+busco --list-datasets
+
+
+
+run_BUSCO.py --in ./Trinity_iso_Sol.fasta --lineage_path ./db_ref/metazoa_odb10 --mode transcriptome --cpu 8 --out BUSCOiso_Solidissima -f >& BUSCO_iso_sol.log &
+blastx -query ./Trinity_iso_Sol.fasta -db ./db_ref/uniprot_sprot.fasta -out blastx_Sol_iso.outfmt6 -evalue 1e-20 -num_threads 4 -max_target_seqs 1 -outfmt 6 &
+
+run_BUSCO.py --in ./Trinity_iso_Sol.fasta --lineage_path ./db_ref/mollusca_odb10 --mode transcriptome --cpu 8 --out BUSCOiso_Solidissima_Mollusc -f >& BUSCO_iso_moll_sol.log &
+
+generate_plot.py -wd run_BUSCOiso_Solidissima
 
 
 
@@ -140,7 +189,7 @@ nohup ./Trinity_sim4_script.sh >& logs2021/Trinity_sim_june13d.log &
 
 
 #### CLEAN TRIINITY AND QA ####
-#June 14th, attempt with old Transdecoded transcriptomes
+#Date: June 14th, attempt with old Transdecoded transcriptomes
 		#Include -single_best_orf command in transdecoder
 #First re-find longest insoforms. So remember the process:
 
@@ -260,4 +309,892 @@ https://github.com/therkildsen-lab/user-guide/blob/master/slurm_tutorial/slurm.m
 sbatch --nodes=1 --ntasks=20 slurmtest_blastx_b.sh
 #did not work
 
+
+#Workshop for blasting
+#https://biohpc.cornell.edu/ww/1/Default.aspx?wid=140
+
+#% Aligned to Transcriptomes
+	#Do I get those sorts of results from dDocent?
+
+
+#Date: Apr 18th
+#https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7952955/
+#Realign the reads
+
+#InterProScan
+	#Works for non-model species
+	#But time consuming
+
+#D. Annotation
+	#1. Predict ORF with Transdecoder
+	/programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t Trinity.fasta
+	/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Trinity.fasta
+			TransDecoder.Predict -t target_transcripts.fasta --retain_pfam_hits pfam.domtblout --retain_blastp_hits blastp.outfmt6
+	#Incorporation of pfam and blast results will improve the accuracy of results
+	blastp #in default path
+	/programs/hmmer/bin/hmmscan
+	
+	#Get directories
+	wget ftp://ftp.sanger.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
+		#does not work
+	cp /shared_data/genome_db/BLAST_NCBI/swissprot* ./
+	
+		#Step i. Extract Open Reading Frames
+	
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=sol_LO_th2_mem20
+#SBATCH --output=sol_out/sol_LO_0418.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+/programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t Trinity_sol.fasta --output_dir sol_out
+
+sbatch --nodes=1 --ntasks=2 --mem=20000 s_LongOrf_sol.sh
+
+#Takes about 13 minutes.
+
+		#Step ii. Homology
+			#a) blastp search with swissprot
+makeblastdb -in uniprot_sprot.fasta -dbtype prot
+
+blastp -query sim_out/longest_orfs.pep  \
+    -db db/uniprot_sprot.fasta  -max_target_seqs 1 \
+    -outfmt 6 -evalue 1e-5 -num_threads 10 > sim_out/blastp.outfmt6
+    		#b) hmmscan
+/programs/hmmer/bin/hmmscan --cpu 8 --domtblout pfam.domtblout /path/to/Pfam-A.hmm transdecoder_dir/longest_orfs.pep
+#No easy pfam download
+
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=sim_blast_th14_mem60
+#SBATCH --output=sim_out/sim_blast_0418.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+blastp -query sim_out/longest_orfs.pep  \
+-db ./db/uniprot_sprot.fasta  -max_target_seqs 1 \
+-outfmt 6 -evalue 1e-5 -num_threads 14 > sim_out/blastp.outfmt6
+
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=sol_blast_th14_mem40
+#SBATCH --output=sol_out/sol_blast_0418.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+blastp -query sol_out/longest_orfs.pep  \
+-db ./db/uniprot_sprot.fasta  -max_target_seqs 1 \
+-outfmt 6 -evalue 1e-5 -num_threads 14 > sol_out/blastp.outfmt6
+
+sbatch --nodes=1 --ntasks=14 --mem=40000 s_blastp_sim.sh
+
+#Takes about 10-14 hours
+
+		#Step iii. Predict
+
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=sol_predict_th2_mem20
+#SBATCH --output=sol_out/sol_predict_0419.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+/programs/TransDecoder-v5.5.0/TransDecoder.Predict -t Trinity_sol.fasta --retain_blastp_hits sol_out/blastp.outfmt6 --output_dir sol_out
+
+sbatch --nodes=1 --ntasks=2 --mem=15000 s_predict_sim.sh
+
+	#2-3. InterProScan
+		#Either run as one or split into different sections for multithreading
+		#On BioHPC servers you can multi thread it
+		#https://biohpc.cornell.edu/lab/userguide.aspx?a=software&i=87#c
+		#Provides function analysis of proteins by classifying them into families and predicting important sites
+
+#Date: Apr 22nd
+#I don't understand what this is doing or how it helps.
+#Then for following steps the main discussion is of differential expression - cannot study - or GO enrichment which I don't know about. 
+	#What I can look for are differences in known genes between the two subspecies where they both have the gene or report on presense/absense but only in a very rudimentary way.
+#Use 22 threads for each
+#Run on the protein fasta file
+	#Where is that?
+	#One of the Trin...transdecoder.??? files?
+	#Which one?
+		#I think pep looks the most like a fasta (cds does too but that's just sequence, not protiens)
+	
+	#Run inside of the introproscan directory
+	./interproscan.sh -b out -f XML -i PO1267.protein.fasta --goterms --pathways --iprlookup  -t p -T ./
+	./interproscan.sh -b sim_interp -d ../sim_out -i ../Trinity_sim.fasta.transdecoder.pep --goterms -t p -T ./simtemp
+	#-cpu 22? <- set this or no?
+	#if I set output format it may only do one whereas if I don't set it by default it looks like it will do XML, TSV, and GFF3
+
+#Run slurm without having to change header as I have always wanted
+
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=temp
+#SBATCH --output=temp.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+./interproscan.sh -d ../sim_out -i ../Trinity_sim.fasta.transdecoder.pep --goterms -t p -T ./simtemp
+
+./interproscan.sh -d ../sol_out -i ../Trinity_sol.fasta.transdecoder.pep --goterms -t p -T ./soltemp
+
+sbatch --nodes=1 --ntasks=22 --mem=80000 -o ../sim_out/interpro.out -J sim_interpro_th22_mem80 s_interpro_sim.sh
+
+#Okay, so it cannot have anything with a * in it from an orf predictor program. Therefore maybe I'm not meant to use the pep file or maybe I just remove the *?
+	#Convert pep to fasta?
+	#Do these trinity files not have only the longest isoform?
+	#Nope
+	
+	#Okay
+	/local/storage/Spisula/Transcriptomes/Transcriptomes/june14_trinity/*longiso.fasta
+	cp /local/storage/Spisula/Transcriptomes/Transcriptomes/june14_trinity/*longiso.fasta . &
+	
+	cp /local/storage/Spisula/Transcriptomes/Transcriptomes/june14_trinity/*longiso.fasta /local/storage/Spisula/Transcriptomes &
+
+#Date: Apr 22nd
+#Repeat all steps with only the longest isoform
+
+#Step 1 - LO (~10 minutes)
+sbatch --nodes=1 --ntasks=2 --mem=20000 -o sol_out/sol_LO_0418.out -J sol_LO_th2_mem20 s1_LongOrf_sol.sh
+sbatch --nodes=1 --ntasks=2 --mem=20000 -o sim_out/sim_LO_0418.out -J sim_LO_th2_mem20 s1_LongOrf_sim.sh
+#Step 2 - blast (~10 hours)
+sbatch --nodes=1 --ntasks=20 --mem=60000 -o sim_out/sim_blast_0422 -J blastsim_th20_mem60 s2_blastp_sim.sh
+sbatch --nodes=1 --ntasks=20 --mem=60000 -o sol_out/sol_blast_0422 -J blastsol_th20_mem60 s2_blastp_sol.sh
+#Step 3 - predict (~15 minutes)
+sbatch --nodes=1 --ntasks=2 --mem=15000 -o sim_out/sim_predict_0422 s3_predict_sim.sh
+sbatch --nodes=1 --ntasks=2 --mem=15000 -o sol_out/sol_predict_0422 s3_predict_sol.sh
+
+#Date: Apr 23rd
+#What's next now? Interpro?	#2-3. InterProScan
+		#Either run as one or split into different sections for multithreading
+		#On BioHPC servers you can multi thread it
+		#https://biohpc.cornell.edu/lab/userguide.aspx?a=software&i=87#c
+		#Provides function analysis of proteins by classifying them into families and predicting important sites
+#Now I need the input file for interproscan which is supposed to be a protein fasta which I do not have
+#So then I need to either make one from the pep file or find another output option in the predict code
+#Using the predictor with the blast results focuses on known genes from humans and the like
+
+#One option I see for the pep file is just to take the first word of each line which will be
+#i) the important part of the header for each line
+#ii) all of the protien for each line
+awk '{print $1}' Trinity_sol.fasta.transdecoder.pep  | head #test
+awk '{print $1}' Trinity_sol.fasta.transdecoder.pep > Trinity_sol.transdecoder.fasta
+awk '{print $1}' Trinity_sim.fasta.transdecoder.pep > Trinity_sim.transdecoder.fasta
+#iii) then remove * because it complained about that last time - I assume that means stop codon
+sed -i 's/*//g' Trinity_sim.transdecoder.fasta
+sed -i 's/*//g' Trinity_sol.transdecoder.fasta
+#Now copy those into the interproscan directory and try to run
+
+sbatch --nodes=1 --ntasks=22 --mem=80000 -o ../sim_out/interpro.out -J sim_interpro_th22_mem80 s_interpro_sim.sh
+sbatch --nodes=1 --ntasks=22 --mem=80000 -o ../sol_out/interpro.out -J sol_interpro_th22_mem80 s_interpro_sol.sh
+#Running!
+
+#What is next?
+#https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7952955/
+	#Take the tsv output of all of the ORFs
+	#Gene Ontoloty
+	#Nevertheless, for this step, the annotated set of genes and the list with differentially expressed genes are both required.
+		#Not sure if the BINGO thing they use makes sense for me / if I need to do several intermediate steps
+#Compare to what Avi was doing..?
+	#Steps of GO enrichment analysis 
+		#1. submit the protein sequences to http://eggnog-mapper.embl.de/ for annotation and mapping
+		#2. Download the protein table from NCBI (a total of 60201 proteins) 
+		#   https://www.ncbi.nlm.nih.gov/genome/398 > click tabular in "Download genome annotation"
+		#3. Using R script 17_adding_LOC_to_eggnog.R to format the eggnog mapper result - "out.emapper.annotations.txt". Remember to delete the headers with # and process information at the bottom. Meanwhile, uncomment the column header for R processing.
+		#4. Using 17_adding_LOC_to_eggnog.R script to add LOC (i.e. gene ID) to eggnog database 
+		#5. Build the GO and KEGG library: Rscript 17_create_orgdb_from_emapper.R out.emapper.annotation.withLOC.uniq.txt
+		#6. Do enrichment test using 17_formal_run.R script
+#Trinotate <- Which was posed as an alternative to InterProScan
+
+#Eggnog
+#What do I want to upload? The cds from the transdecoder predict? Or from the longestORFs? Or a new predict without blast results? <- that'd probably be similar to the longestORFs, right?
+#Alright well I can send the longest_orfs.pep cause I think that one has no *s in it so it'll likely be happier
+#Used default values
+Minimum hit e-value
+0.001
+Minimum hit bit-score
+60
+Percentage identity
+40
+Minimum % of query coverage
+20
+Minimum % of subject coverage
+20
+
+
+#Date: Apr 23rd
+#Other transcriptome stuff that isn't GO
+#Realigning the reads to the transcriptome
+	#The other saved versions of this might be in the Marker Development folder but I have learned a lot about alignments since then too
+
+while read p; do
+echo "bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R @RG\tID:"$p"\tSM:"$p"\tPL:Illumina Trinity_sol.fasta "$p"_clean_R1.fastq.gz "$p"_clean_R2.fastq.gz"
+done < samples.txt
+#ALWAYS quote your variables or stuff can get weird
+
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=temp
+#SBATCH --output=temp.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+
+bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R @RG\tID:Sim4\tSM:Sim4\tPL:Illumina Trinity_sim.fasta Sim4_clean_R1.fastq.gz Sim4_clean_R2.fastq.gz
+bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R @RG\tID:Sim5\tSM:Sim5\tPL:Illumina Trinity_sim.fasta Sim5_clean_R1.fastq.gz Sim5_clean_R2.fastq.gz
+bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R @RG\tID:Sim6\tSM:Sim6\tPL:Illumina Trinity_sim.fasta Sim6_clean_R1.fastq.gz Sim6_clean_R2.fastq.gz
+samtools view -S -b Sim4_bwa.sam > Sim4_bwa.bam
+samtools view -S -b Sim5_bwa.sam > Sim5_bwa.bam
+samtools view -S -b Sim6_bwa.sam > Sim6_bwa.bam
+
+
+sbatch --nodes=1 --ntasks=4 --mem=25000 -o simalign.out -J sim_bwa_th4_mem25 s_simalign.sh
+sbatch --nodes=1 --ntasks=4 --mem=25000 -o solalign.out -J sol_bwa_th4_mem25 s_solalign.sh
+
+bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R @RG\tID:Sol10\tSM:Sol10\tPL:Illumina Trinity_sol.fasta Sol10_clean_R1.fastq.gz Sol10_clean_R2.fastq.gz
+bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R @RG\tID:Sol6\tSM:Sol6\tPL:Illumina Trinity_sol.fasta Sol6_clean_R1.fastq.gz Sol6_clean_R2.fastq.gz
+bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R @RG\tID:Sol7\tSM:Sol7\tPL:Illumina Trinity_sol.fasta Sol7_clean_R1.fastq.gz Sol7_clean_R2.fastq.gz
+bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R @RG\tID:Sol8\tSM:Sol8\tPL:Illumina Trinity_sol.fasta Sol8_clean_R1.fastq.gz Sol8_clean_R2.fastq.gz
+samtools view -S -b Sol10_bwa.sam > Sol10_bwa.bam
+samtools view -S -b Sol6_bwa.sam > Sol6_bwa.bam
+samtools view -S -b Sol7_bwa.sam > Sol7_bwa.bam
+samtools view -S -b Sol8_bwa.sam > Sol8_bwa.bam
+
+
+#While I'm at it, just set up aligning the GBS to the transcriptome to run in the background so I have it
+#set up sample list cleanly
+ls ../../dDocent/dDoc_0330/sol_ref/*.F.fq.gz > samplelist.txt
+sed -i 's/\//\t/g' samplelist.txt #turn directory slashes into tabs
+sed -i 's/\./\t/g' samplelist.txt #turn . into tabs
+#Makes for a very messy file but I can extract columns
+awk '{print $4}' samplelist.txt | head #guessed it on my first try, hell yeah!
+awk '{print $4}' samplelist.txt > samplelist2.txt
+mv samplelist2.txt samplelist.txt
+
+while read p; do
+#DO NOT USE - See Apr 24th for correction
+#echo "bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R \$(echo \"@RG\tID:"$p"\tSM:"$p"\tPL:Illumina\") Trinity_sim.fasta ../"$p"_clean_R1.fastq.gz ../"$p"_clean_R2.fastq.gz > "$p"_bwa.sam"
+#echo "bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R \$(echo \"@RG\tID:"$p"\tSM:"$p"\tPL:Illumina\") Trinity_sol.fasta ../"$p"_clean_R1.fastq.gz ../"$p"_clean_R2.fastq.gz > "$p"_bwa.sam"
+#echo "samtools view -S -b "$p"_bwa.sam > "$p"_bwa.bam"
+done < ../samplelist.txt > s_GBS2trans_sol.sh
+#Had to do some weird \ to get it to keep the $ and " " through the first echo
+	#Then add bash header
+#Do I need to be setting better output files when I'm doing some of the same stuff in the same directory?
+#Yeah I guess so... do it in two separate where they call the reads from the above directory
+#And I need to run sim and sol separately so I can start them from different directories
+#Index fasta reference
+samtools faidx Trinity_sim.fasta
+#Still getting error
+bwa index Trinity_sim.fasta #not samtools
+#Takes a lot longer ~2.5 minutes per reference
+#Need to set the output file > .sam
+#Then add to the script to convert sam to bam
+samtools view -S -b sample.sam > sample.bam
+
+
+#Date: Apr 23rd
+#Check the results of Interproscan - took about 3.5 hours
+#Based on time created, it looks like interproscan produces 4 files
+-rw-rw-r--  1 hh693 hh693  78M Apr 23 19:43 Trinity_sim.transdecoder.fasta.gff3
+-rw-rw-r--  1 hh693 hh693 174M Apr 23 19:43 Trinity_sim.transdecoder.fasta.json
+-rw-rw-r--  1 hh693 hh693  31M Apr 23 19:43 Trinity_sim.transdecoder.fasta.tsv
+-rw-rw-r--  1 hh693 hh693 161M Apr 23 19:43 Trinity_sim.transdecoder.fasta.xml
+#That fits from what I remember of the list of options of output files
+#So then what? Files are non-zero in size. The tutorial seemed kind of disconnected at this point 
+#Try looking at their example?
+	#InterProScan v5.26-65.0 results were combined with the summary of BLAST searches reported by Trinotate v3.1.1.
+	#InterProScan was run with the following methods: CDD, Gene3D, Hamap, PANTHER, Pfam, PIRSF, PRINTS, ProDom, ProSitePatterns, ProSiteProfiles, SFLD, SMART, SUPERFAMILY, TIGRFAM. The comprehensive annotation with InterProScan required some days to complete. 
+	#They also used Trionate
+	#The prediction of coding regions for Trinotate was performed with TransDecoder v5.3.0
+		#So I could be good there
+	#As the final result, the combination of Trinotate and InterProScan analyses allowed 75652 out of the 98870 pine transcripts (76.5%) to be successfully annotated ( Duarte et al., 2019 ).
+	#Using this final dataset, the transcript ID GO ID relationships were retrieved using the GO_retriever.py script provided in this protocol for generating the background file which was used for the GO enrichment analysis with BiNGO v3.03.
+	
+	#GO_retriver python script should work if I can figure out how to run it - it takes .tsv as the input
+	#But now I'm at much the same point as I was previously
+
+#Look at what is in the files?
+	#Looks like lists of genes matched with each of the things they might match with and some description
+
+#Date: Apr 24th
+#The alignment worked with the reads but not the GBS?
+#Extract the stats from the reads
+samtools flagstat input.bam > stats.out
+
+while read p; do
+echo "samtools flagstat "$p"_bwa.bam > "$p"_alignstats.out"
+done < samples.txt > j_runbamstats.txt
+#Taking longer than I'd expect... More than two for a single sample
+#The bam files are ~ 5G
+#Is the same true of dDocent (the L=5 could have a big impact), how much bigger is the transcriptome than the dDoc catalog?
+87M Apr 23 17:02 Trinity_sol.fasta
+989K Mar 30 16:34 reference.fasta
+#Transcriptome is much bigger, less stringent cut off... all together sums to lots of stuff
+
+#Run in parralel  in slurm
+parallel -j 7 < j_runbamstats.txt
+
+nano s_runbamstats.sh
+
+sbatch --nodes=1 --ntasks=7 --mem=50000 -o runstats.out -J bwa_stats_th7_mem50 s_runbamstats.sh
+#Only took about 5 min
+#Pulling values manually now - find a way to pull alignment statistics with awk
+
+#Great, now while that's going check what went wrong with the GBS to transcriptome alignments
+#Did something but the file sizes are all zero
+#Could not open the files given the path
+	#Because I used the same notation as was used for the RNA reads - i.e. "clean" but that's not the notation used for the GBS
+
+while read p; do
+#echo "bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R \$(echo \"@RG\tID:"$p"\tSM:"$p"\tPL:Illumina\") Trinity_sim.fasta ../"$p".R1.fq.gz ../"$p".R2.fq.gz > "$p"_bwa.sam"
+echo "bwa mem -L 5 -t 4 -a -M -T 30 -A 1 -B 4 -O 6 -R \$(echo \"@RG\tID:"$p"\tSM:"$p"\tPL:Illumina\") Trinity_sol.fasta ../"$p".R1.fq.gz ../"$p".R2.fq.gz > "$p"_bwa.sam"
+echo "samtools view -S -b "$p"_bwa.sam > "$p"_bwa.bam"
+done < ../samplelist.txt > s_GBS2trans_sol.sh
+
+#Run from within each directory
+sbatch --nodes=1 --ntasks=4 --mem=25000 -o GBS2soltrans.out -J bwa_GBS2sol_th4_mem25 s_GBS2trans_sol.sh
+sbatch --nodes=1 --ntasks=4 --mem=25000 -o GBS2simtrans.out -J bwa_GBS2sim_th4_mem25 s_GBS2trans_sim.sh
+
+
+#Date: Apr 26th 2022
+#Redo fastqc for raw and trimmed
+#Save to folder
+fastqc
+#(version 0.11.8)
+
+ls > list.txt
+while read p; do
+echo "fastqc $p"
+done < list.txt > j_fast
+parallel -j 8 < j_fast &
+#Not working?
+
+#Janky parallele slurm
+
+fastqc Sim4_clean_R2.fastq.gz &
+fastqc Sim4_R1.fastq.gz &
+fastqc Sim4_R2.fastq.gz &
+fastqc Sim5_clean_R1.fastq.gz &
+fastqc Sim5_clean_R2.fastq.gz &
+fastqc Sim5_R1.fastq.gz &
+fastqc Sim5_R2.fastq.gz &
+fastqc Sim6_clean_R1.fastq.gz &
+fastqc Sim6_clean_R2.fastq.gz &
+fastqc Sim6_R1.fastq.gz &
+fastqc Sim6_R2.fastq.gz &
+fastqc Sol10_clean_R1.fastq.gz &
+fastqc Sol10_clean_R2.fastq.gz &
+fastqc Sol10_R1.fastq.gz &
+fastqc Sol10_R2.fastq.gz &
+fastqc Sol6_clean_R1.fastq.gz &
+fastqc Sol6_clean_R2.fastq.gz &
+fastqc Sol6_R1.fastq.gz &
+fastqc Sol6_R2.fastq.gz &
+fastqc Sol7_clean_R1.fastq.gz &
+fastqc Sol7_clean_R2.fastq.gz &
+fastqc Sol7_R1.fastq.gz &
+fastqc Sol7_R2.fastq.gz &
+fastqc Sol8_clean_R1.fastq.gz &
+fastqc Sol8_clean_R2.fastq.gz &
+fastqc Sol8_R1.fastq.gz &
+fastqc Sol8_R2.fastq.gz 
+
+sbatch --nodes=1 --ntasks=29 --mem=40000 -o fast.out -J fastqc_th29_mem40 s_fast.sh
+
+
+#Transcriptome stats
+/programs/trinityrnaseq-v2.10.0/util/TrinityStats.pl Trinity.fasta >& stats.log
+
+
+/programs/trinityrnaseq-v2.10.0/util/TrinityStats.pl fullTranscriptome/Trinity_sol.fasta >& stats_fullsol.log &
+/programs/trinityrnaseq-v2.10.0/util/TrinityStats.pl fullTranscriptome/Trinity_sim.fasta >& stats_fullsim.log &
+
+/programs/trinityrnaseq-v2.10.0/util/TrinityStats.pl longestIso/Trinity_sol.fasta >& stats_isosol.log &
+/programs/trinityrnaseq-v2.10.0/util/TrinityStats.pl longestIso/Trinity_sim.fasta >& stats_isosim.log &
+
+#Looks like the "longest isoform" isn't longer on avereage so I should try to fix that by refinding the longest
+#Could it be an issue of the line breaks? No, probably not.
+
+grep ">" fullTranscriptome/Trinity_sol.fasta | awk 'OFS="\t" {print $1, $2}' | sed 's/len=//g' | head
+#How to separate awk output by tabs - OFS="\t"
+grep ">" fullTranscriptome/Trinity_sol.fasta | awk 'OFS="\t" {print $1, $2}' | sed 's/len=//g' > full_sollengths.txt
+grep ">" fullTranscriptome/Trinity_sim.fasta | awk 'OFS="\t" {print $1, $2}' | sed 's/len=//g' > full_simlengths.txt
+
+grep ">" longestIso/Trinity_sol.fasta | awk 'OFS="\t" {print $1, $2}' | sed 's/len=//g' > iso1_sollengths.txt
+grep ">" longestIso/Trinity_sim.fasta | awk 'OFS="\t" {print $1, $2}' | sed 's/len=//g' > iso1_simlengths.txt
+
+count=0;
+total=0; 
+awk '{ total += $2; count++ } END { print total/count }' iso1_sollengths.txt
+#In conclusion the script works
+#So the longest isoform selection did not
+	#Or maybe it did - the longest genes have several long isoforms which skewe the average up whereas each smaller gene only has one so the average should be smaller
+#Repeat the selection
+	#After doing so I did get smaller than total average length, however the average lengths are different than what I had saved for the previous "longest isoforms"
+	#There are more total genes here which might fix the issue I saw earlier with fewer total genes in the stats for the longest isoforms
+
+#Fasta pull sequences based on names
+makeblastdb -in Trinity.fasta -dbtype nucl -parse_seqids
+blastdbcmd -db Trinity.fasta -entry_batch LongestIso_Sol.txt -out Trinity_longiso2.fasta
+
+makeblastdb -in Trinity_sol.fasta -dbtype nucl -parse_seqids
+blastdbcmd -db Trinity_sol.fasta -entry_batch newcontigs_sol.txt -out Trinity_sol_longiso2.fasta
+blastdbcmd -db Trinity_sim.fasta -entry_batch newcontigs_sim.txt -out Trinity_sim_longiso2.fasta
+
+/programs/trinityrnaseq-v2.10.0/util/TrinityStats.pl Trinity_sol_longiso2.fasta >& stats_iso2sol.log &
+/programs/trinityrnaseq-v2.10.0/util/TrinityStats.pl Trinity_sim_longiso2.fasta >& stats_iso2sim.log &
+
+#Perfect! Number of genes is the same and everything else it right with the world
+
+#Now I need to rerun everything
+	#For alignment I just copied the thing so that I can use the same code
+		#Don't forget to add in the stats and index the fastas
+bwa index Trinity_sim.fasta
+samtools view -S -b Sim4_bwa.sam > Sim4_bwa.bam
+samtools flagstat Sim4_bwa.bam > Sim4_alignstats.out
+
+samtools flagstat Sol10_bwa.bam > Sol10_alignstats.out
+samtools flagstat Sol6_bwa.bam > Sol6_alignstats.out
+samtools flagstat Sol7_bwa.bam > Sol7_alignstats.out
+samtools flagstat Sol8_bwa.bam > Sol8_alignstats.out
+
+sbatch --nodes=1 --ntasks=4 --mem=25000 -o simalign.out -J sim_bwa_th4_mem25 s_simalign.sh
+sbatch --nodes=1 --ntasks=4 --mem=25000 -o solalign.out -J sol_bwa_th4_mem25 s_solalign.sh
+
+	#Now rerun GO with the longestiso2
+	#Should I interupt the align2GBS? Eh. What much am I getting out of it any way?
+			#Takes about 8 minutes per sample = 61 hours - it's been going for ~48 and it's half way through GA = 196 / 461 samples so that's an underestimate of time required approx 5 days
+			#Interupt and do with more parallelization if I want to do again
+cp Trinity_sim_longiso2.fasta Trinity_sim.fasta
+cp Trinity_sol_longiso2.fasta Trinity_sol.fasta
+#To not have to change code
+mkdir sim_out
+mkdir sol_out
+
+
+#Step 1 - LO (~10 minutes)
+sbatch --nodes=1 --ntasks=2 --mem=20000 -o sol_out/sol_LO_0426.out -J sol_LO_th2_mem20 s1_LongOrf_sol.sh
+sbatch --nodes=1 --ntasks=2 --mem=20000 -o sim_out/sim_LO_0426.out -J sim_LO_th2_mem20 s1_LongOrf_sim.sh
+#Step 2 - blast (~10 hours) - WAS MUCH FASTER (~3.5 hours)
+sbatch --nodes=1 --ntasks=20 --mem=60000 -o sim_out/sim_blast_0426 -J blastsim_th20_mem60 s2_blastp_sim.sh
+sbatch --nodes=1 --ntasks=20 --mem=60000 -o sol_out/sol_blast_0426 -J blastsol_th20_mem60 s2_blastp_sol.sh
+#Step 3 - predict (~15 minutes)
+sbatch --nodes=1 --ntasks=2 --mem=15000 -o sim_out/sim_predict_0426 s3_predict_sim.sh
+sbatch --nodes=1 --ntasks=2 --mem=15000 -o sol_out/sol_predict_0426 s3_predict_sol.sh
+#Step 4 - interproscan
+#One option I see for the pep file is just to take the first word of each line which will be
+#i) the important part of the header for each line
+#ii) all of the protien for each line
+awk '{print $1}' Trinity_sol.fasta.transdecoder.pep > Trinity_sol.transdecoder.fasta
+awk '{print $1}' Trinity_sim.fasta.transdecoder.pep > Trinity_sim.transdecoder.fasta
+#iii) then remove * because it complained about that last time - I assume that means stop codon
+sed -i 's/*//g' Trinity_sim.transdecoder.fasta
+sed -i 's/*//g' Trinity_sol.transdecoder.fasta
+#Now copy those into the interproscan directory and try to run
+cp Trinity_sol.transdecoder.fasta interproscan-5.44-79.0/
+cp Trinity_sim.transdecoder.fasta interproscan-5.44-79.0/
+
+sbatch --nodes=1 --ntasks=22 --mem=80000 -o ../sim_out/interpro.out -J sim_interpro_th22_mem80 s_interpro_sim.sh
+sbatch --nodes=1 --ntasks=22 --mem=80000 -o ../sol_out/interpro.out -J sol_interpro_th22_mem80 s_interpro_sol.sh
+#Running!
+
+
+#Resend to Eggnog
+#Once you upload then you have to actually start the job
+#What do I want to upload? The cds from the transdecoder predict? Or from the longestORFs? Or a new predict without blast results? <- that'd probably be similar to the longestORFs, right?
+#Alright well I can send the longest_orfs.pep cause I think that one has no *s in it so it'll likely be happier
+#Used default values
+Minimum hit e-value
+0.001
+Minimum hit bit-score
+60
+Percentage identity
+40
+Minimum % of query coverage
+20
+Minimum % of subject coverage
+20
+
+#!/bin/bash -l
+
+#SBATCH --partition=regular
+#SBATCH --job-name=temp
+#SBATCH --output=temp.out
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=hh693@cornell.edu
+
+sbatch --nodes=1 --ntasks=1 --mem=10000 -o outextra_sol.out -J FST_th1_10MB extra_sol_highFST.sh
+
+#Date: Apr 29th
+#Rerun BUSCO with new longest isoforms
+#I saved the metazoa and mollusca - nice!
+/db/busco/
+#Unzip
+
+#set environment
+source /programs/miniconda3/bin/activate busco-5.2.2
+busco -i ../longestIso/Trinity_sim_longiso2.fasta -l ../../db/busco/metazoa_odb10 -c 10 -m transcriptome -o sim_t_meta
+busco -i ../longestIso/Trinity_sol_longiso2.fasta -l ../../db/busco/metazoa_odb10 -c 10 -m transcriptome -o sol_t_meta
+busco -i ../longestIso/Trinity_sim_longiso2.fasta -l ../../db/busco/mollusca_odb10 -c 10 -m transcriptome -o sim_t_mollusca
+busco -i ../longestIso/Trinity_sol_longiso2.fasta -l ../../db/busco/mollusca_odb10 -c 10 -m transcriptome -o sol_t_mollusca
+
+sbatch --nodes=1 --ntasks=10 --mem=30000 -o busco1.out -J BUSCO1_th10_30MB busco1.sh
+sbatch --nodes=1 --ntasks=10 --mem=30000 -o busco2.out -J BUSCO2_th10_30MB busco2.sh
+sbatch --nodes=1 --ntasks=10 --mem=30000 -o busco3.out -J BUSCO3_th10_30MB busco3.sh
+sbatch --nodes=1 --ntasks=10 --mem=30000 -o busco4.out -J BUSCO4_th10_30MB busco4.sh
+
+# Metaeuk did not recognize any genes matching the dataset metazoa_odb10 in the input file. If this is unexpected, check your input file and your installation of Metaeuk
+
+#old path
+export BUSCO_CONFIG_FILE=/workdir/hh693/config.ini 
+export PYTHONPATH=/programs/busco-3.1.0/lib/python3.6/site-packages 
+export PATH=/programs/busco-3.1.0/scripts:$PATH
+busco --list-datasets
+#Instead install fresh
+singularity pull busco_5.1.3.sif docker://quay.io/biocontainers/busco:5.1.3--pyhdfd78af_0
+#Otherwise it kind of just doesn't work ?
+
+
+./busco_5.1.3.sif busco -h
+./busco_5.1.3.sif busco --list-datasets
+#mollusca_odb10
+#metazoa_odb10
+
+./busco_5.1.3.sif busco -i ./Trinity_sim_longiso2.fasta -l metazoa_odb10 -c 10 -m transcriptome -o sim_t_meta
+
+nano busco5.sh
+sbatch --nodes=1 --ntasks=10 --mem=30000 -o busco5.out -J BUSCO5_th10_30MB busco5.sh
+
+nano busco6.sh
+sbatch --nodes=1 --ntasks=10 --mem=30000 -o busco6.out -J BUSCO6_th10_30MB busco6.sh
+
+
+#Date: May 4th
+#Run get GO on the InterproScan results
+#Get eggNOG results into the same format as Interproscan
+#Server is quite busy so if it is just a single thread, run but otherwise do short term on a small server
+
+#Output is...
+longestIso/sim_out/Trinity_sim.transdecoder.fasta.tsv
+#Also gff3, json, and xml
+
+#Assume I need to run GO_retriever.py
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7952955/
+#Follow steps to alter python script
+#Line 12: Based on your annotation file, set the column (N) where the GO ID numbers were reported.
+	#For starters assume it matches cause I don't know which one
+	#There is no default, it seems to be talking about GOs as using | pipes
+		#Try 8 or 13
+python GO_retriever_sim.py Trinity_sim.transdecoder.fasta.tsv
+#Wow, okay, this script does almost nothing, it just pulls the things from the GO collumn
+
+#Look at the eggNOG results
+#Could probably do the eggNOG tsv
+python GO_retriever_eggsim.py sim_eggNOG.tsv 
+python GO_retriever_eggsol.py sol_eggNOG.tsv
+#Column and separator set differently
+
+#EggNOG has a lot more
+#Sort by uniqu
+sort eggNOG_sim_GOs.txt | uniq > egg_sim_GOs.txt
+#Did not remove any
+sort Trinity_sim_GOs.txt | uniq > Ipro_sim_GOs.txt
+#Did remove some
+sort Trinity_sol_GOs.txt | uniq > Ipro_sol_GOs.txt
+
+#So now, I want to find the best goodies
+#Compare with other papers I've found in the past - see PRR
+
+#So I still have 9k + 
+#Sort by evalue?
+	#Or Score, for eggNOG
+	#Lookup the the output headers of InterproScan
+
+#The TSV format presents the match data in columns as follows:
+#Protein accession (e.g. P51587)
+#Sequence MD5 digest (e.g. 14086411a2cdf1c4cba63020e1622579)
+#Sequence length (e.g. 3418)
+#Analysis (e.g. Pfam / PRINTS / Gene3D)
+#Signature accession (e.g. PF09103 / G3DSA:2.40.50.140)
+#Signature description (e.g. BRCA2 repeat profile)
+#Start location
+#Stop location
+#Score - is the e-value (or score) of the match reported by member database method (e.g. 3.1E-52)
+#Status - is the status of the match (T: true)
+#Date - is the date of the run
+#InterPro annotations - accession (e.g. IPR002093)
+#InterPro annotations - description (e.g. BRCA2 repeat)
+#(GO annotations (e.g. GO:0005515) - optional column; only displayed if –goterms option is switched on)
+#(Pathways annotations (e.g. REACT_71) - optional column; only displayed if –pathways option is switched on)
+
+#Sorted by score then unique descriptions	
+	#Several have the same descriptions all with score 0
+
+#Compare to what Avi did after eggnog
+	#Comparative GO - not for me
+
+#Keep searching for terms but do it with grep instead of excel
+
+#Date: May 6th
+#Find number of transcripts with orfs
+awk '{print $1}' sim_out/longest_orfs_sim2.pep | grep ">" > sim_out/uni_sim.pep
+# Set . as column demarkator so I can just get the isoform
+awk '{print $1}' sim_out/longest_orfs_sim2.pep | grep ">" | awk '{print $1}' FS=. > sim_out/uni_sim.pep
+sort sim_out/uni_sim.pep | uniq | wc -l
+29847
+#Check: wc -l sim_out/uni_sim.pep = 40567
+
+awk '{print $1}' sol_out/longest_orfs_sol2.pep | grep ">" | awk '{print $1}' FS=. > sol_out/uni_sol.pep
+sort sol_out/uni_sol.pep | uniq | wc -l
+
+
+#Date: Sept 1st 2022
+#Remove contaminants from other taxa from the ORFs of the transcriptome for relatedness
+#Actually, if I'm just looking at BUSCO relatedness, that's not needed
+#Which analysis is affected by it? Some of the stats?
+
+#Actually, not needed first
+#What did I do last time for the divergence estimate?
+
+#Date: Aug 15th
+#Use fasta-puller to get out the genes
+#Sol
+TRINITY_DN9081_c0_g1_i8:75-14108
+#Sim
+TRINITY_DN125_c0_g1_i19:105-16541
+
+#It may not have the same isoform as the one that mapped best, but I guess theoretically it should because these should have been the ones which were only single copy in the original.
+#Give it a shot
+
+samtools faidx Trinity_sol_longiso2.fasta TRINITY_DN9081_c0_g1_i8:75-14108 > outputs/39at6447.fasta
+samtools faidx Trinity_sim_longiso2.fasta TRINITY_DN125_c0_g1_i19:105-16541 >> outputs/39at6447.fasta
+
+#They aren't labeled, but I guess it don't matter, especially if sol is always first
+#Pull off of server and put into blast
+https://blast.ncbi.nlm.nih.gov/Blast.cgi?BLAST_SPEC=blast2seq&LINK_LOC=align2seq&PAGE_TYPE=BlastSearch
+#Paste each half into a different box
+97.61%
+#Great!
+
+#blast on server
+#save to two separate files
+samtools faidx Trinity_sol_longiso2.fasta TRINITY_DN9081_c0_g1_i8:75-14108 > outputs/39at6447_sol.fasta
+samtools faidx Trinity_sim_longiso2.fasta TRINITY_DN125_c0_g1_i19:105-16541 >> outputs/39at6447_sim.fasta
+
+blastn -query outputs/39at6447_sol.fasta -subject outputs/39at6447_sim.fasta > outputs/39at6447_b.txt
+
+grep "Iden" outputs/39at6447_b.txt | awk '{print $3}'
+#^ That gets me the ratio of matching to not. I think that's about as good as it can get cause the % has no decimals
+#So then I just save a big ol' file of those on top of eachother.
+
+touch percentids.txt
+while read -r -a fields; do
+  name=${fields[1]}     
+  solcor=${fields[3]}
+  simcor=${fields[5]}
+  echo ${fields[3]}
+  echo ${fields[5]}
+#echo "samtools faidx Trinity_sol_longiso2.fasta $solcor > outputs/$name.sol.fasta"
+samtools faidx Trinity_sim_longiso2.fasta $simcor > outputs/$name.sim.fasta
+#blastn -query outputs/$name.sol.fasta -subject outputs/$name.sim.fasta > outputs/$anme.b.txt
+#grep "Iden" outputs/$name.b.txt | head -1 | awk '{print $3}' >> percentids.txt
+done < temp.txt 
+
+#Try dividing them into collumns
+awk '{print $3}' temp.txt > tempsolcor.txt
+awk '{print $5}' temp.txt > tempsimcor.txt
+awk '{print $1}' temp.txt > tempgenes.txt
+
+#For loop this time
+for j in {1..20}
+do
+sed -n -e $jp tempsolcor.txt
+done
+
+#Nah, lets up set up the commands in excel. I'm done with this
+#I did not get the same, but rather similar results across methods. Fine
+1.16% +- 0.51% divergence
+#From ~51 samples
+
+#All samples
+parallel -j 6 < j_calcids.txt
+
+
+#So instead now I want to assess the four-fold degenerate positions of the fastas from the BUSCO
+
+#Start by translating one gene pair into two pairs of peptide sequences
+	#Then sanity check in blast that there's not a frameshift
+
+pal2nal 
+/programs/pal2nal/pal2nal.pl
+#Requires peptide alignment and then one or more nuclear base fastas
+#Then it outputs a clustal or a fasta or paml
+	#So then what do they do with it?
+		#Finally, pairwise alignments were used to obtain estimates for Ka, Ks and Ka/Ks using paml (Yang 1997).
+	#So I want paml output
+	#How do I run paml?
+		#Also on server!
+	/programs/paml4.9j/bin/[prog] [options]
+	#(where [prog] is one of PAML programs)
+	
+	#which program?
+		#codeml I think
+
+#use the outputs in the percent difference for the separate contigs fastas
+#combine first into one fasta sequence
+cat ../percentDifference/outputs/243at6447_sim.fasta ../percentDifference/outputs/243at6447_sol.fasta > input_fastas/243at6447_both.fa
+
+#convert to the longest open reading frame of peptides
+	#orffinder (not avaliable on command line)
+	#EMBOSS - getorf
+/programs/emboss/bin/[prog] #version 6.6.0
+
+/programs/emboss/bin/getorf -sequence input_fastas/243at6447_both.fa -minsize 500 -outseq peptest.faa
+#Outputs two (minsize is just estimate) unlabeled but I guess labeledness is irrelevant
+
+#They are probably aligned already but also clustal the sequence and the peptide
+/programs/clustalo -i 
+/programs/clustalo -i input_fastas/243at6447_both.fa -o input_fastas/align_both_n.fa
+/programs/clustalo -i input_fastas/peptest.faa -o input_fastas/align_both_a.faa
+
+#Then pal2nal (I may need to change the names if it needs to know who is who)
+/programs/pal2nal/pal2nal.pl input_fastas/align_both_a.faa input_fastas/align_both_n.fa -nogap -output paml > pal2nal/pamltest.pa
+	##- sequence order in pep.aln and nuc.fasta should be the same.
+	##- IDs in pep.aln are used in the output.
+	
+	#-output only works if it is the final flag
+
+#codeml
+#create the config file
+/programs/paml4.9j/bin/codeml temp/codeml1.ctl
+#Beware it makes log files without my control - yet
+
+#prepare test file
+nano control_files/codeml1.ctl
+
+seqfile = pal2nal/pamltest.pa
+outfile = outputs/codeml1.txt
+runmode = -2
+
+/programs/paml4.9j/bin/codeml control_files/codeml1.ctl
+
+#Control file needs more inputs
+#example:
+seqfile = cluster_1.pal2nal   * sequence data filename
+outfile = codeml.txt   * main result file name
+
+runmode = -2     * -2:pairwise
+noisy = 0      * 0,1,2,3,9: how much rubbish on the screen
+verbose = 0      * 1:detailed output
+seqtype = 1      * 1:codons
+CodonFreq = 2      * 0:equal, 1:F1X4, 2:F3X4, 3:F61
+model = 1      *
+NSsites = 0      *
+icode = 0      * 0:universal code
+fix_kappa = 1      * 1:kappa fixed, 0:kappa to be estimated
+kappa = 1      * initial or fixed kappa
+fix_omega = 0      * 1:omega fixed, 0:omega to be estimated
+omega = 0.5    * initial omega value
+*ndata = 1
+
+#Ran instantly!
+#Output looks like
+#Long file with the important line at the end:
+t= 0.0118  S=  1127.5  N=  4431.5  dN/dS=  0.0121  dN = 0.0002  dS = 0.0185
+
+#Pull list of all the files I have
+
+#Ideally, output data in columns which have percent identity AND dN/dS plus accompanying stats
+
+#Prepare for loop
+ls ../percentDifference/outputs/*_sim.fasta | sed -s 's/..\/percentDifference\/outputs\///g' | sed -s 's/_sim.fasta//g' > listofshared.txt
+
+while read p; do
+cat ../percentDifference/outputs/"$p"_sim.fasta ../percentDifference/outputs/"$p"_sol.fasta > input_fastas/"$p"_both.fa
+done < listofshared.txt
+/programs/emboss/bin/getorf -sequence input_fastas/"$p"_both.fa -minsize 500 -outseq input_fastas/"$p"_both_pep.fa
+/programs/clustalo -i input_fastas/"$p"_both.fa --force -o input_fastas/align_"$p"_both_n.fa
+/programs/clustalo -i input_fastas/"$p"_both_pep.fa -o input_fastas/align_"$p"_both_pep.faa
+/programs/pal2nal/pal2nal.pl input_fastas/align_"$p"_both_pep.faa input_fastas/align_"$p"_both_n.fa -nogap -output paml > pal2nal/"$p"_paml.pa
+#this is probably not the way to do it
+touch control_files/codeml_"$p".ctl
+echo seqfile = pal2nal/"$p"_paml.pa >> control_files/codeml_"$p".ctl
+echo outfile = pal2nal/"$p"_codeml.txt >> control_files/codeml_"$p".ctl
+cat default.ctl >> control_files/codeml_"$p".ctl
+#Run
+/programs/paml4.9j/bin/codeml control_files/codeml_"$p".ctl
+done < listofshared.txt
+
+#Do one bit at a time cause it's fast and debugging
+while read p; do
+/programs/clustalo -i input_fastas/"$p"_both.fa --force -o input_fastas/align_"$p"_both_n.fa
+/programs/clustalo -i input_fastas/"$p"_both_pep.fa -o input_fastas/align_"$p"_both_pep.faa
+/programs/pal2nal/pal2nal.pl input_fastas/align_"$p"_both_pep.faa input_fastas/align_"$p"_both_n.fa -nogap -output paml > pal2nal/"$p"_paml.pa
+#this is probably not the way to do it
+touch control_files/codeml_"$p".ctl
+echo seqfile = pal2nal/"$p"_paml.pa >> control_files/codeml_"$p".ctl
+echo outfile = outputs/"$p"_codeml.txt >> control_files/codeml_"$p".ctl
+cat default.ctl >> control_files/codeml_"$p".ctl
+#Run
+/programs/paml4.9j/bin/codeml control_files/codeml_"$p".ctl
+done < listofshared.txt
+#Some of them didn't work - failed at the emboss step (possibly cause they are shorter than 500 bp)
+mv pal2nal/*_codeml.txt outputs/
+
+
+#Prepare loop to extract data
+echo -n "foo" >> file.txt #appends to the same line
+
+p="3156at6447"
+
+grep 't=' dNdScalculation/outputs/"$p"_codeml.txt | awk '{print $6}'
+grep 't=' dNdScalculation/outputs/"$p"_codeml.txt | awk '{print $14,$11,$8}'
+#Prints dN	dS	dN/dS
+#Now get the % ID
+grep "Iden" percentDifference/outputs/"$p"_b.txt | awk '{print $3}'
+#Prints number of bases matching out of number of bases total			#Divides them into separate collumns
+grep "Iden" percentDifference/outputs/"$p"_b.txt | awk '{print $3}' | awk 'BEGIN { FS = "/" } ; { print $1,$2 }'
+
+nano temp.txt
+#Pos	Matching	Total	dN	dS	dN/dS
+
+#Tell awk to stop outputting to new lines
+ORS=''
+
+while read p; do
+echo "" >> temp.txt
+echo -n $p >> temp.txt
+grep "Iden" percentDifference/outputs/"$p"_b.txt | awk '{print $3}' | awk 'BEGIN { FS = "/" } ; { print $1,$2 }' ORS='\t' >> temp.txt
+grep 't=' dNdScalculation/outputs/"$p"_codeml.txt | awk '{print $14,$11,$8}' ORS='\t' >> temp.txt
+done < test.txt
+
+#There is not consistent spacing on the dN/dS output
+#I'll have to do this in excel again?
+#That'll be a pain too
+
+head -20 dNdScalculation/listofshared.txt > test.txt
+#Also its not printing both parts of % ID even though it works on its own
+#Try to make two equal length files
+
+while read p; do
+grep "Iden" percentDifference/outputs/"$p"_b.txt | awk '{print $3}' | awk 'BEGIN { FS = "/" } ; { print $1,$2 }' ORS='\t' >> temp1.txt
+grep 't=' dNdScalculation/outputs/"$p"_codeml.txt | awk '{print $14,$11,$8}' ORS='\t' >> temp1.txt
+echo "" >> temp1.txt
+done < test.txt
+#Works enough!!
+
+while read p; do
+grep "Iden" percentDifference/outputs/"$p"_b.txt | head -1 | awk '{print $3}' | awk 'BEGIN { FS = "/" } ; { print $1,$2 }' ORS=' ' >> divstats.txt
+grep 't=' dNdScalculation/outputs/"$p"_codeml.txt | awk '{print $14,$11,$8}' ORS=' ' >> divstats.txt
+printf "\n" >> divstats.txt
+done < dNdScalculation/listofshared.txt
 

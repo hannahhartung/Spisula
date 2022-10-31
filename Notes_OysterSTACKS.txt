@@ -124,7 +124,7 @@ grep -iE "\b(err|e:|warn|w:|fail|abort)" stacks.M*/denovo_map.log
 	 Min depth of coverage to create a stack: 3 #? but that's just the m parameter I think
 	 
 	 
-	 #Depths of Coverage for Processed Samples:
+	#Depths of Coverage for Processed Samples:
 	SV0512a_024.R1: 158.249x
 	SV1013a_003.R1: 120.526x
 	AB812s_012.R1: 121.879x
@@ -151,13 +151,121 @@ M=1
 stacks_dir=stacks.M$M
 out_dir=$stacks_dir/populations.r80
 log_file=$out_dir/populations.oe
-/programs/stacks/bin/populations -P $stacks_dir -O $out_dir -T 24 -r 0.80 &> $log_file
+/programs/stacks/bin/populations -P $stacks_dir -O $out_dir -t 24 -r 0.80 &> $log_file
 #Put into for loop slurm
 #Should probably add threads thing but I feel like this might be a short run
+#For some reason here -t is threads instead of -T? and -T doesn't work? Maybe i can do populations -help to get all the options for each program?
 #Remember to do full path for all stacks programs
 
 sbatch --nodes=1 --ntasks=24 slurm_locishared80_test1.sh
 
+#But I was right, that was a super fast step, about a minute.
+
+#Now make my choice about parameters
+#From our set of test runs, we will plot two statistics that are useful in making this choice: 
+	#the number of polymorphic loci shared across most samples (the r80 loci)
+	#and the distribution of the number of SNPs per locus (Fig. 2). 
+	#Both of these statistics are reported in the batch_1.populations.log file (in the populations.r80/ directory) 
+	#For their example:
+		#Considering that, for our data set, the number of widely shared loci plateaus starting at about M = 4 (Fig. 2a), 
+		#and that M = 4 is sufficient to stabilize the proportions of loci with 1–5 SNPs (Fig. 2b), they went with M=4
+
+#I will be graphing:
+# Distribution of the number of SNPs per locus.
+#and
+# Distribution of population loci after applying locus constraints.
+# Distribution of valid loci matched to catalog locus.
+# Valid samples at locus	Count
+# 11	2272
+# 12	2270
+# 13	2777
+#The sum of those three values
 
 
+#Cannot add images here, but first look at the loci per M leads me to think it plateaus closer to M7
+# I am proceeding with M = 8
 
+#This way, for threading, use different protocol a little bit
+
+sample=cs_1335.01
+sample_index=1
+fq_file=../reads/$sample.fq.gz
+log_file=$sample.ustacks.oe
+/programs/stacks/bin/ustacks -f $fq_file -i $sample_index -o . -M 8 -m 3 &> $log_file
+#This seems like a pain in the but so I'm gonna try doing it the other way instead
+
+#I'm preparing my sample list and omitting GRV, FI and FIS
+#Make it by ls > file, then 
+sed -n 's/.fq.gz//gpw popmap.all1.tsv' popmap.all.tsv
+#Then tab to add one site code, then open in excel to make it faster
+
+
+sbatch --nodes=1 --ntasks=40 slurm_stacks_fullset.sh
+#says it is looking for samples without the fq.gz?
+#Oh pull from the folder with all, not just the subset (in this case reads cause they are already cleaned)
+
+#AND we're up and running! Started the big long thing at 9:35am July 16th. 
+#Also, even doing it this way, it was using 40 cores for a while, but perhaps it is still much less efficient.
+
+#Additionally, this sloppy method incorporates all of the samples into the catalog, whereas it is better to only include those with high coverage
+#Except the other mode is only for a cluster that actually has different nodes, we only have 1 node.
+
+
+#Make sure all jobs have completed successfully. 
+#Use the command described at Step 15A(v), and check that ustacks has created four files for each sample ($sample.tags.tsv.gz, $sample.models.tsv.gz, $sample.snps.tsv.gz, and $sample.alleles.tsv.gz) and that these files are not empty.
+
+
+#Not computationally useful but I could still incorporate the second catalog building step by..
+#As with the test samples (Step 14), write this list as a population map popmap.catalog.tsv and place it in the info/ directory. Including all samples in the catalog adds noise to it (Fig. 3), increases the computation time, and is unnecessary if low-minor allele frequency (MAF) variants are not of primary interest.
+
+#They anticipate that this might take 2ish days. 
+
+
+#Next up: using RXSTACKS to filter haplotypes and snps - Step 18
+
+
+#Date: July 19th
+
+#Slides on SLURM and parallelization
+	#https://biohpc.cornell.edu/lab/doc/Parallel_workshop.pdf
+	#https://biohpc.cornell.edu/lab/doc/parallel_exercise2.html
+		#Data still available, but the slurm cluster won't work but we just have one node
+
+#Could I do parallel with a job list inside a slurm?
+
+#Or slurm_array
+sample=AB812s_002.R1
+sample_index=1
+fq_file=../reads/$sample.fq.gz
+log_file=$sample.ustacks.oe
+/programs/stacks/bin/ustacks -f $fq_file -i $sample_index -o ./ -M 8 -m 3 &> $log_file
+
+#Pull out mean coverage
+#THIS IS THE PART JEFF HELPED WITH: GREP (grep) STEP BY STEP 
+# The ^ means start of the line only
+grep "^After remainders merged, coverage depth Mean:" tests.denovo/stacks.M8/denovo_map.log | cut -d ":" -f2 | cut -d ";" -f1 | tr -d " "
+
+
+#Test for one of the biggest samples
+sample=SV0512a_024.R1
+sample_index=80
+fq_file=../reads/$sample.fq.gz
+log_file=$sample.ustacks.oe
+/programs/stacks/bin/ustacks -f $fq_file -i $sample_index -o ./ -M 8 -m 3 &> $log_file
+
+sacct -l --name=ustacks_full
+
+#Slurm memory by default is 4GB
+--mem 20000
+
+
+#Test depth
+#align new stuff to transcriptome.
+
+MW.056	Hare_Project_003	151	151	210713_A00223_0599_BH7YTHDRXY	14572
+MW.055	Hare_Project_003	151	151	210713_A00223_0599_BH7YTHDRXY	28460
+MW.013	Hare_Project_003	151	151	210713_A00223_0599_BH7YTHDRXY	53032
+MW.012	Hare_Project_003	151	151	210713_A00223_0599_BH7YTHDRXY	71584
+MW.020	Hare_Project_003	151	151	210713_A00223_0599_BH7YTHDRXY	234882
+MW.021	Hare_Project_003	151	151	210713_A00223_0599_BH7YTHDRXY	857267
+MW.009	Hare_Project_003	151	151	210713_A00223_0599_BH7YTHDRXY	1195635
